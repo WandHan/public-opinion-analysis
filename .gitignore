@@ -11,21 +11,13 @@ venv/
 # 数据文件（根据需要调整）
 *.csv
 
-# 文档和参考资料
-ref_md/
-*.docx
-*.bat
-
-# Python 脚本（部署时不需要）
-使用说明_多文件加载.md
-快速开始.md
-
 # 临时文件
 .DS_Store
 Thumbs.db
 *.log
 
-# 只保留必要的部署文件：
-# - index.html
-# - analysis_results/
+# 断点续传进度文件
+.analysis_progress.json
+
+
 

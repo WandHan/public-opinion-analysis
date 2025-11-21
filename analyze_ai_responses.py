@@ -239,9 +239,74 @@ def analyze_single_response(question: str, ai_response: str, platform: str,
         "Strategy_Action": "需要手动检查"
     }
 
+# ==================== 断点续传功能 ====================
+PROGRESS_FILE = ".analysis_progress.json"
+
+def save_progress(csv_path: str, total: int, processed: int, results: List[Dict], 
+                  start_time: str, rows_data: List[Dict]):
+    """保存处理进度"""
+    progress_data = {
+        "csv_file": csv_path,
+        "csv_file_abs": os.path.abspath(csv_path),
+        "start_time": start_time,
+        "total": total,
+        "processed": processed,
+        "results": results,
+        "rows_data": rows_data,  # 保存所有行数据，以便恢复
+        "last_update": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(progress_data, f, ensure_ascii=False, indent=2)
+
+def load_progress() -> Optional[Dict]:
+    """加载未完成的进度"""
+    if not os.path.exists(PROGRESS_FILE):
+        return None
+    
+    try:
+        with open(PROGRESS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"⚠️  无法加载进度文件: {e}")
+        return None
+
+def clear_progress():
+    """清除进度文件"""
+    if os.path.exists(PROGRESS_FILE):
+        os.remove(PROGRESS_FILE)
+        print("✓ 进度文件已清除")
+
+def check_unfinished_task() -> Optional[Dict]:
+    """检查是否有未完成的任务"""
+    progress = load_progress()
+    
+    if progress is None:
+        return None
+    
+    # 检查CSV文件是否还存在
+    csv_file = progress.get('csv_file', '')
+    if not os.path.exists(csv_file):
+        print(f"⚠️  原CSV文件 {csv_file} 不存在，忽略进度")
+        clear_progress()
+        return None
+    
+    # 检查是否已完成
+    if progress.get('processed', 0) >= progress.get('total', 0):
+        print("⚠️  进度文件显示任务已完成，将清除进度")
+        clear_progress()
+        return None
+    
+    return progress
+
 # ==================== 读取CSV并批量分析 ====================
-def analyze_csv_data(csv_path: str = "数据表.csv") -> List[Dict]:
-    """读取CSV数据并进行批量分析"""
+def analyze_csv_data(csv_path: str = "数据表.csv", resume_progress: Optional[Dict] = None) -> List[Dict]:
+    """读取CSV数据并进行批量分析，支持断点续传
+    
+    Args:
+        csv_path: CSV文件路径
+        resume_progress: 要恢复的进度数据（如果提供）
+    """
     
     # 加载框架
     print("正在加载分析框架...")
@@ -249,20 +314,39 @@ def analyze_csv_data(csv_path: str = "数据表.csv") -> List[Dict]:
     output_framework = load_output_framework()
     print("✓ 框架加载完成")
     
-    # 读取CSV
-    print(f"\n正在读取CSV文件: {csv_path}")
-    results = []
-    
-    with open(csv_path, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
+    # 判断是否从断点恢复
+    if resume_progress:
+        print(f"\n从断点恢复处理...")
+        start_time = resume_progress.get('start_time', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        results = resume_progress.get('results', [])
+        rows = resume_progress.get('rows_data', [])
+        start_idx = resume_progress.get('processed', 0)
         total = len(rows)
         
-        print(f"✓ 共找到 {total} 条数据\n")
-        print("=" * 80)
+        print(f"✓ 已完成 {start_idx}/{total} 条")
+        print(f"✓ 将从第 {start_idx + 1} 条开始继续处理\n")
+    else:
+        # 全新开始
+        print(f"\n正在读取CSV文件: {csv_path}")
+        results = []
+        start_idx = 0
+        start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        for idx, row in enumerate(rows, 1):
-            print(f"\n[{idx}/{total}] 处理中...")
+        with open(csv_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            total = len(rows)
+        
+        print(f"✓ 共找到 {total} 条数据\n")
+    
+    print("=" * 80)
+    
+    try:
+        for idx in range(start_idx, len(rows)):
+            row = rows[idx]
+            current_idx = idx + 1
+            
+            print(f"\n[{current_idx}/{total}] 处理中...")
             
             question = row.get('问题', '')
             ai_response = row.get('回答', '')
@@ -270,6 +354,8 @@ def analyze_csv_data(csv_path: str = "数据表.csv") -> List[Dict]:
             
             if not question or not ai_response:
                 print("⚠️  跳过空数据")
+                # 即使跳过也要保存进度
+                save_progress(csv_path, total, current_idx, results, start_time, rows)
                 continue
             
             # 调用AI分析
@@ -282,12 +368,30 @@ def analyze_csv_data(csv_path: str = "数据表.csv") -> List[Dict]:
             )
             
             # 添加原始数据的序号和填写人信息
-            analysis_result['序号'] = row.get('序号', idx)
+            analysis_result['序号'] = row.get('序号', current_idx)
             analysis_result['填写人'] = row.get('填写人', '')
             
             results.append(analysis_result)
             
+            # 每处理完一条就保存进度
+            save_progress(csv_path, total, current_idx, results, start_time, rows)
+            print(f"✓ 进度已保存 ({current_idx}/{total})")
+            
             print("-" * 80)
+        
+        # 全部完成后清除进度文件
+        clear_progress()
+        
+    except KeyboardInterrupt:
+        print("\n\n⚠️  检测到中断信号 (Ctrl+C)")
+        print(f"✓ 进度已保存！已完成 {len(results)}/{total} 条")
+        print(f"✓ 下次运行时可以选择从断点继续")
+        raise
+    except Exception as e:
+        print(f"\n✗ 发生错误: {e}")
+        print(f"✓ 进度已保存！已完成 {len(results)}/{total} 条")
+        print(f"✓ 修复问题后可以从断点继续")
+        raise
     
     return results
 
@@ -514,18 +618,37 @@ def save_results(results: List[Dict], output_dir: str = "analysis_results",
     return filepath
 
 # ==================== 显示菜单并获取用户选择 ====================
-def show_menu() -> str:
+def show_menu(has_unfinished: bool = False) -> str:
     """显示主菜单并返回用户选择"""
     print("\n请选择操作模式：")
+    
+    if has_unfinished:
+        print("⚡ 发现未完成的任务！")
+        print("R. 从断点继续未完成的任务 (推荐)")
+        print("-" * 40)
+    
     print("1. 从CSV文件开始新的分析")
     print("2. 选择已有的分析结果进行补足（重新分析失败的条目）")
     print("0. 退出")
     
+    valid_choices = ['0', '1', '2']
+    if has_unfinished:
+        valid_choices.append('r')
+        valid_choices.append('R')
+    
     while True:
-        choice = input("\n请输入选项 (0/1/2): ").strip()
-        if choice in ['0', '1', '2']:
-            return choice
-        print("⚠️  无效输入，请输入 0、1 或 2")
+        if has_unfinished:
+            choice = input("\n请输入选项 (R/0/1/2): ").strip()
+        else:
+            choice = input("\n请输入选项 (0/1/2): ").strip()
+        
+        if choice.lower() in [c.lower() for c in valid_choices]:
+            return choice.upper() if choice.upper() == 'R' else choice
+        
+        if has_unfinished:
+            print("⚠️  无效输入，请输入 R、0、1 或 2")
+        else:
+            print("⚠️  无效输入，请输入 0、1 或 2")
 
 def select_json_file() -> Optional[str]:
     """让用户选择已有的JSON文件"""
@@ -579,7 +702,7 @@ def select_json_file() -> Optional[str]:
 def main():
     """主函数"""
     print("\n" + "="*80)
-    print("赛力斯/问界 AI声誉分析工具".center(80))
+    print("赛力斯/问界 AI声誉分析工具 (支持断点续传)".center(80))
     print("="*80 + "\n")
     
     # 检查API密钥
@@ -589,18 +712,63 @@ def main():
         return
     
     try:
+        # 检查未完成的任务
+        unfinished_progress = check_unfinished_task()
+        
+        if unfinished_progress:
+            print("=" * 80)
+            print("⚡ 发现未完成的任务！")
+            print("=" * 80)
+            print(f"CSV文件: {unfinished_progress.get('csv_file', 'N/A')}")
+            print(f"开始时间: {unfinished_progress.get('start_time', 'N/A')}")
+            print(f"总数据量: {unfinished_progress.get('total', 0)} 条")
+            print(f"已完成: {unfinished_progress.get('processed', 0)} 条")
+            print(f"剩余: {unfinished_progress.get('total', 0) - unfinished_progress.get('processed', 0)} 条")
+            print(f"上次更新: {unfinished_progress.get('last_update', 'N/A')}")
+            print("=" * 80)
+        
         # 显示菜单
-        choice = show_menu()
+        choice = show_menu(has_unfinished=bool(unfinished_progress))
         
         if choice == '0':
             print("\n再见！")
             return
+        
+        elif choice == 'R':
+            # 模式R: 从断点继续
+            print("\n" + "="*80)
+            print("模式R: 从断点继续未完成的任务")
+            print("="*80)
+            
+            if not unfinished_progress:
+                print("⚠️  没有未完成的任务")
+                return
+            
+            csv_file = unfinished_progress.get('csv_file', '')
+            
+            # 从断点继续分析
+            results = analyze_csv_data(csv_file, resume_progress=unfinished_progress)
+            
+            # 保存结果
+            output_file = save_results(results, csv_filename=csv_file)
+            
+            print("✓ 所有任务完成！")
+            print(f"下一步: 可以将 {output_file} 中的数据整合到 index.html 中展示")
         
         elif choice == '1':
             # 模式1: 从CSV开始新的分析
             print("\n" + "="*80)
             print("模式1: 从CSV文件开始新的分析")
             print("="*80)
+            
+            # 如果有未完成的任务，警告用户
+            if unfinished_progress:
+                print("\n⚠️  警告: 开始新任务将会覆盖当前未完成的进度！")
+                confirm = input("是否确认开始新任务？(y/n): ").strip().lower()
+                if confirm != 'y':
+                    print("\n操作已取消")
+                    return
+                clear_progress()
             
             # 让用户选择CSV文件
             csv_file = select_csv_file()
