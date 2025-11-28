@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>赛力斯 GEO 优化综合解决方案</title>
+
+    <!-- Favicon -->
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+
+    <!-- Tailwind CSS - 抑制生产环境警告（仅用于单文件演示） -->
+    <script>
+        // 在加载 Tailwind 之前，抑制控制台中的 Tailwind CDN 警告
+        (function () {
+            const originalWarn = console.warn;
+            const originalError = console.error;
+
+            // 过滤不需要显示的警告和错误
+            const shouldSuppress = function (message) {
+                if (typeof message === 'string') {
+                    return message.includes('cdn.tailwindcss.com should not be used in production') ||
+                        message.includes('tailwindcss.com/docs/installation') ||
+                        message.includes('Immersive Translate') ||
+                        message.includes('initImageTools error') ||
+                        message.includes('Cannot read properties of null');
+                }
+                return false;
+            };
+
+            // 重写 console.warn
+            console.warn = function (...args) {
+                if (!shouldSuppress(args[0])) {
+                    originalWarn.apply(console, args);
+                }
+            };
+
+            // 重写 console.error（某些环境可能使用 error 而不是 warn）
+            console.error = function (...args) {
+                if (!shouldSuppress(args[0])) {
+                    originalError.apply(console, args);
+                }
+            };
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Babel Standalone - 用于转换 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- 自定义样式 -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+        }
+
+        /* 自定义滚动条 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: #94a3b8;
+        }
+
+        /* 动画 */
+        @keyframes fade-in-up {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in-up {
+            animation: fade-in-up 0.4s ease-out forwards;
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+            }
+        }
+
+        .btn-expand {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes slide-right {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .animate-slide-right {
+            animation: slide-right 0.3s ease-out;
+        }
+
+        /* 优先级颜色 */
+        .priority-high {
+            border-left: 4px solid #ef4444;
+        }
+
+        .priority-medium {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .priority-low {
+            border-left: 4px solid #10b981;
+        }
+
+        .badge-high {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+
+        .badge-medium {
+            background-color: #fef3c7;
+            color: #d97706;
+        }
+
+        .badge-low {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+    </style>
+</head>
+
+<body class="bg-[#F0F2F5] text-slate-900 overflow-hidden">
+    <!-- 全局错误处理：捕获浏览器扩展的错误，避免影响页面功能 -->
+    <script>
+        // 捕获并过滤浏览器扩展的错误（如 Immersive Translate）
+        window.addEventListener('error', function (event) {
+            // 检查是否是扩展脚本的错误
+            const isExtensionError = event.filename && (
+                event.filename.includes('content_script.js') ||
+                event.filename.includes('extension://') ||
+                event.filename.includes('immersive-translate') ||
+                event.filename.includes('chrome-extension://') ||
+                event.filename.includes('moz-extension://')
+            );
+
+            // 检查错误消息是否来自扩展
+            const isExtensionMessage = event.message && (
+                event.message.includes('Immersive Translate') ||
+                event.message.includes('initImageTools') ||
+                event.message.includes('querySelector')
+            );
+
+            if (isExtensionError || isExtensionMessage) {
+                // 扩展错误，静默处理，不显示在控制台
+                event.preventDefault();
+                return false;
+            }
+
+            // 其他错误正常显示，帮助调试
+            console.error('页面错误:', event.error || event.message, event.filename, event.lineno);
+        }, true);
+
+        // 捕获未处理的 Promise 拒绝（扩展可能产生的）
+        window.addEventListener('unhandledrejection', function (event) {
+            const reason = event.reason;
+            const reasonStr = reason ? (reason.toString ? reason.toString() : String(reason)) : '';
+
+            if (reasonStr.includes('Immersive Translate') ||
+                reasonStr.includes('content_script') ||
+                reasonStr.includes('initImageTools')) {
+                event.preventDefault();
+            }
+        });
+    </script>
+
+    <div id="root"></div>
+
+    <!-- React 应用逻辑 -->
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from 'https://esm.sh/react@18.2.0';
+        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
+        import {
+            Menu, X, ChevronLeft, ChevronRight, AlertCircle, Zap, Target,
+            FileText, CheckCircle2, TrendingUp, Clock, Briefcase, AlertTriangle,
+            Shield, Lightbulb, Users, Calendar, DollarSign, Activity, Smartphone
+        } from 'https://esm.sh/lucide-react@0.292.0?bundle';
+
+        const App = () => {
+            const [data, setData] = useState(null);
+            const [selectedIndex, setSelectedIndex] = useState(0);
+            const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            // 加载 JSON 数据
+            useEffect(() => {
+                fetch('./solution/综合解决方案_20251127_153438.json')
+                    .then(response => {
+                        if (!response.ok) throw new Error('无法加载解决方案文件');
+                        return response.json();
+                    })
+                    .then(jsonData => {
+                        setData(jsonData);
+                        setLoading(false);
+                    })
+                    .catch(err => {
+                        setError(err.message);
+                        setLoading(false);
+                    });
+            }, []);
+
+            if (loading) {
+                return (
+                    <div className="flex h-screen bg-[#F0F2F5] items-center justify-center">
+                        <div className="text-center">
+                            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                            <p className="text-slate-600 font-medium">正在加载解决方案...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (error) {
+                return (
+                    <div className="flex h-screen bg-[#F0F2F5] items-center justify-center">
+                        <div className="text-center max-w-md">
+                            <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
+                            <h2 className="text-xl font-bold text-slate-900 mb-2">加载失败</h2>
+                            <p className="text-slate-600">{error}</p>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                            >
+                                重新加载
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (!data || !data.solutions || !Array.isArray(data.solutions) || data.solutions.length === 0) {
+                return (
+                    <div className="flex h-screen bg-[#F0F2F5] items-center justify-center">
+                        <div className="text-center max-w-md">
+                            <AlertCircle className="mx-auto text-amber-500 mb-4" size={48} />
+                            <h2 className="text-xl font-bold text-slate-900 mb-2">数据格式错误</h2>
+                            <p className="text-slate-600">解决方案数据为空或格式不正确</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            // 确保 selectedIndex 在有效范围内
+            const validIndex = Math.max(0, Math.min(selectedIndex, data.solutions.length - 1));
+            if (validIndex !== selectedIndex) {
+                setSelectedIndex(validIndex);
+            }
+
+            const selectedSolution = data.solutions[validIndex];
+            if (!selectedSolution) {
+                return (
+                    <div className="flex h-screen bg-[#F0F2F5] items-center justify-center">
+                        <div className="text-center max-w-md">
+                            <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
+                            <h2 className="text-xl font-bold text-slate-900 mb-2">数据加载错误</h2>
+                            <p className="text-slate-600">无法加载选中的解决方案</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            const getPriorityClass = (priority) => {
+                if (priority === '高') return 'priority-high';
+                if (priority === '中') return 'priority-medium';
+                return 'priority-low';
+            };
+            const getBadgeClass = (priority) => {
+                if (priority === '高') return 'badge-high';
+                if (priority === '中') return 'badge-medium';
+                return 'badge-low';
+            };
+            const priorityClass = getPriorityClass(selectedSolution.priority);
+            const badgeClass = getBadgeClass(selectedSolution.priority);
+
+            return (
+                <div className="flex h-screen bg-[#F0F2F5] font-sans text-slate-900 overflow-hidden selection:bg-blue-100 selection:text-blue-900 relative">
+
+                    {/* Mobile Overlay */}
+                    <div
+                        className={`md:hidden fixed inset-0 z-20 transition-opacity duration-300 ${sidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
+                            }`}
+                        onClick={() => setSidebarCollapsed(true)}
+                    >
+                        <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm"></div>
+                    </div>
+
+                    {/* Left Sidebar: Solutions List */}
+                    <div className={`
+                        fixed md:relative
+                        bg-white/80 border-r border-slate-200/60 
+                        flex flex-col h-full z-30 backdrop-blur-xl
+                        transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] overflow-hidden
+                        ${sidebarCollapsed
+                            ? '-translate-x-full md:translate-x-0 w-full md:w-0 md:border-0 md:shadow-none opacity-0 md:opacity-0 pointer-events-none'
+                            : 'translate-x-0 w-full md:w-[420px] lg:w-[480px] shadow-2xl shadow-slate-200/50 opacity-100'
+                        }
+                    `}>
+                        {/* Header */}
+                        <div className="p-6 pb-2 border-b border-slate-100/50 bg-white/50 backdrop-blur-sm">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-slate-900/20">
+                                        <Activity size={18} className="text-white" />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-sm font-bold text-slate-900 tracking-tight">AITO 声誉监测</h1>
+                                        <p className="text-[10px] text-slate-400 font-medium tracking-[0.2em] uppercase mt-0.5">Intelligence Pro</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setSidebarCollapsed(true)}
+                                    className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                                >
+                                    <ChevronLeft size={18} />
+                                </button>
+                            </div>
+
+                            {/* Navigation Button to Index */}
+                            <div className="mb-4">
+                                <a
+                                    href="./index.html"
+                                    className="group flex items-center justify-between w-full px-4 py-3 rounded-xl bg-gradient-to-r from-slate-50 to-slate-100/80 border border-slate-200/60 hover:border-slate-300 hover:shadow-md transition-all duration-200"
+                                >
+                                    <div className="flex items-center space-x-3">
+                                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                                            <Activity size={16} className="text-white" />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-xs font-bold text-slate-900">返回主页面</p>
+                                            <p className="text-[10px] text-slate-500 group-hover:text-slate-600 transition-colors">Intelligence Pro</p>
+                                        </div>
+                                    </div>
+                                    <ChevronRight size={16} className="text-slate-400 group-hover:text-slate-600 group-hover:translate-x-1 transition-all" />
+                                </a>
+                            </div>
+
+                            {/* Summary Stats - 声誉监测风格 */}
+                            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100/80 rounded-xl mt-4">
+                                {[
+                                    { id: 'high', label: '高危问题', count: data.metadata.高危问题数量, color: 'text-red-600', activeBg: 'bg-white text-red-600 shadow-sm' },
+                                    { id: 'warning', label: '预警问题', count: data.metadata.预警问题数量, color: 'text-amber-600', activeBg: 'bg-white text-amber-600 shadow-sm' },
+
+                                ].map(tab => (
+                                    <div
+                                        key={tab.id}
+                                        className={`
+                                            relative py-2.5 rounded-lg flex flex-col items-center justify-center transition-all duration-200
+                                            ${tab.activeBg}
+                                        `}
+                                    >
+                                        <span className="text-[10px] font-bold uppercase tracking-wider mb-0.5">{tab.label}</span>
+                                        <span className={`text-lg font-bold leading-none ${tab.color}`}>{tab.count}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Solutions List */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-3 space-y-1.5">
+                            {data && data.solutions && Array.isArray(data.solutions) && data.solutions.map((solution, index) => {
+                                if (!solution) return null;
+                                const itemPriorityClass = getPriorityClass(solution.priority || '中');
+                                const itemBadgeClass = getBadgeClass(solution.priority || '中');
+                                return (
+                                    <div
+                                        key={index}
+                                        onClick={() => {
+                                            setSelectedIndex(index);
+                                            if (window.innerWidth < 768) {
+                                                setSidebarCollapsed(true);
+                                            }
+                                        }}
+                                        className={`group px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 border relative ${itemPriorityClass} ${selectedIndex === index
+                                            ? 'bg-blue-50/50 border-blue-500/20 shadow-sm'
+                                            : 'bg-white border-transparent hover:border-slate-200 hover:shadow-sm hover:bg-white'
+                                            }`}
+                                    >
+                                        <div className="flex justify-between items-start mb-1.5">
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${itemBadgeClass}`}>
+                                                {solution.priority}优先级
+                                            </span>
+                                            <div className={`w-1.5 h-1.5 rounded-full ${solution.priority === '高' ? 'bg-red-500 shadow-red-500/50 shadow-[0_0_8px]' :
+                                                solution.priority === '中' ? 'bg-amber-500 shadow-amber-500/50 shadow-[0_0_8px]' : 'bg-emerald-500'
+                                                }`}></div>
+                                        </div>
+                                        <h3 className={`text-[13px] font-medium leading-relaxed line-clamp-2 ${selectedIndex === index ? 'text-blue-900' : 'text-slate-600 group-hover:text-slate-900'
+                                            }`}>
+                                            {solution.dimension}
+                                        </h3>
+                                        <div className="flex items-center justify-between mt-2">
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100/80 text-slate-500 font-medium border border-slate-100">
+                                                {solution.action_items.length} 项
+                                            </span>
+                                            <span className={`text-[10px] font-bold tracking-tight ${solution.priority === '高' ? 'text-red-500' :
+                                                solution.priority === '中' ? 'text-amber-600' : 'text-emerald-600'
+                                                }`}>
+                                                {solution.priority}优先级
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Right Main Content */}
+                    <div className="flex-1 h-full flex flex-col bg-[#F0F2F5] overflow-hidden relative">
+                        {/* Background Pattern */}
+                        <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#475569 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+
+                        {/* Toggle Button */}
+                        {sidebarCollapsed && (
+                            <div className="absolute left-0 top-0 bottom-0 z-40 w-16 hover:w-20 transition-all duration-300 group flex flex-col items-center pt-8 bg-transparent">
+                                <button
+                                    onClick={() => setSidebarCollapsed(false)}
+                                    className="p-3 rounded-xl bg-white shadow-lg border border-slate-100 text-slate-600 hover:text-blue-600 hover:scale-110 transition-all duration-300"
+                                >
+                                    <Menu size={20} />
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Content Area */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 lg:p-12">
+                            {selectedSolution && (
+                                <div className="w-full max-w-6xl mx-auto animate-fade-in-up">
+
+                                    {/* Executive Summary - Show for All Solutions */}
+                                    {data.executive_summary && (
+                                        <div className="mb-12">
+                                            {/* Header Section - Reference Image Style */}
+                                            <div className="mb-8">
+                                                <div className="flex items-start justify-between mb-4">
+                                                    <div className="flex flex-col">
+                                                        {/* ANALYSIS REPORT Label */}
+                                                        <div className="mb-2">
+                                                            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em] leading-tight">
+                                                                <div>ANALYSIS</div>
+                                                                <div className="ml-2">REPORT</div>
+                                                            </div>
+                                                        </div>
+                                                        {/* Number Badge */}
+
+                                                    </div>
+                                                </div>
+                                                {/* Main Title */}
+                                                <h2 className="text-4xl md:text-5xl font-bold text-slate-700 leading-tight" style={{ color: '#475569' }}>
+                                                    解决方案综述
+                                                </h2>
+                                            </div>
+
+                                            {/* Summary Content */}
+                                            <p className="text-base leading-8 text-slate-700">
+                                                {data.executive_summary.核心问题概述}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Solution Dimension Header + Strategy Overview - Combined */}
+                                    <div className="mb-8">
+                                        <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-2xl shadow-md border-2 border-slate-200 p-8">
+                                            {/* Header Section */}
+                                            <div className="mb-6 pb-6 border-b border-slate-200">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="flex items-center space-x-3">
+                                                        <span className={`text-sm font-bold px-4 py-2 rounded-full ${badgeClass} shadow-sm`}>
+                                                            {selectedSolution.priority}优先级
+                                                        </span>
+                                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                                                            解决方案 {selectedIndex + 1}/{data.solutions.length}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <h1 className="text-3xl md:text-4xl font-bold text-slate-900 leading-tight">{selectedSolution.dimension}</h1>
+                                            </div>
+
+                                            {/* Strategy Overview Section */}
+                                            <div className="flex items-start space-x-4">
+                                                <div className="w-10 h-10 rounded-full bg-blue-50 border-2 border-blue-500 flex items-center justify-center flex-shrink-0">
+                                                    <Lightbulb size={20} className="text-blue-500" fill="currentColor" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h2 className="text-2xl font-bold text-slate-900 mb-3">战略概述</h2>
+                                                    <p className="text-[17px] leading-8 text-slate-700">
+                                                        {selectedSolution.strategy_overview}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Target Problems */}
+                                    {selectedSolution.target_problems && Array.isArray(selectedSolution.target_problems) && selectedSolution.target_problems.length > 0 && (
+                                        <div className="mb-8">
+                                            <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center space-x-2">
+                                                <Target size={20} className="text-slate-900 stroke-current" strokeWidth={1.5} />
+                                                <span>目标问题</span>
+                                            </h2>
+                                            <div className="grid grid-cols-12 gap-4">
+                                                {selectedSolution.target_problems.map((problem, i) => (
+                                                    <div key={i} className="col-span-12 md:col-span-6 bg-white rounded-xl border border-slate-200 p-4">
+                                                        <p className="text-base text-slate-700 leading-7">{problem}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* GEO Principles */}
+                                    {selectedSolution.geo_principles && Array.isArray(selectedSolution.geo_principles) && selectedSolution.geo_principles.length > 0 && (
+                                        <div className="mb-8">
+                                            <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center space-x-2">
+                                                <Shield size={20} className="text-slate-900 stroke-current" strokeWidth={1.5} />
+                                                <span>GEO 原则</span>
+                                            </h2>
+                                            <div className="grid grid-cols-12 gap-4">
+                                                {selectedSolution.geo_principles.map((principle, i) => (
+                                                    <div key={i} className="col-span-12 md:col-span-6 bg-white rounded-xl border border-slate-200 p-4">
+                                                        <p className="text-base text-slate-700 leading-7">{principle}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Action Items - Enhanced Focus */}
+                                    {selectedSolution.action_items && Array.isArray(selectedSolution.action_items) && selectedSolution.action_items.length > 0 && (
+                                        <div className="mb-8">
+                                            <div className="bg-white rounded-xl border-2 border-slate-200 p-8 mb-8 shadow-lg">
+                                                <h2 className="text-4xl font-bold text-slate-900 flex items-center space-x-4 mb-4">
+                                                    <div className="w-12 h-12 rounded-lg bg-black flex items-center justify-center flex-shrink-0">
+                                                        <CheckCircle2 size={28} className="text-white stroke-current" strokeWidth={2} />
+                                                    </div>
+                                                    <span>核心行动方案 ({selectedSolution.action_items.length} 项)</span>
+                                                </h2>
+                                                <p className="text-base text-slate-600 mt-2">以下为可立即执行的具体行动项，每项均包含详细的执行方法、目标平台和预期成果</p>
+                                            </div>
+                                            <div className="space-y-6">
+                                                {selectedSolution.action_items.map((item, idx) => {
+                                                    if (!item) return null;
+                                                    return (
+                                                        <div key={idx} className="bg-white rounded-2xl border-2 border-slate-200 overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01]">
+                                                            {/* Action Header - Enhanced */}
+                                                            <div className="bg-white border-b-2 border-slate-200 p-6">
+                                                                <div className="flex items-start justify-between mb-2">
+                                                                    <div className="flex items-center space-x-3">
+                                                                        <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 border-2 border-blue-500">
+                                                                            <span className="text-blue-500 font-bold text-lg">{idx + 1}</span>
+                                                                        </div>
+                                                                        <h3 className="text-xl font-bold text-slate-900 leading-tight">{item.action}</h3>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Action Content */}
+                                                            <div className="p-6 space-y-5">
+                                                                {/* Description - Simplified */}
+                                                                <div>
+                                                                    <p className="text-[17px] leading-8 text-slate-700">
+                                                                        {item.description}
+                                                                    </p>
+                                                                </div>
+
+                                                                {/* GEO Method - Simplified */}
+                                                                <div className="pt-4 border-t border-slate-200">
+                                                                    <div className="flex items-center space-x-2 mb-2">
+                                                                        <Zap size={18} className="text-blue-500 stroke-current" strokeWidth={2} />
+                                                                        <p className="text-base font-bold text-slate-700">GEO 核心方法</p>
+                                                                    </div>
+                                                                    <p className="text-base text-slate-900 font-medium leading-7">{item.geo_method}</p>
+                                                                </div>
+
+                                                                {/* Platforms - Simplified */}
+                                                                {item.platforms && Array.isArray(item.platforms) && item.platforms.length > 0 && (
+                                                                    <div className="pt-4 border-t border-slate-200">
+                                                                        <p className="text-base font-bold text-slate-700 mb-3">目标平台</p>
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            {item.platforms.map((platform, p) => (
+                                                                                <div key={p} className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-lg shadow-sm">
+                                                                                    <Smartphone size={16} className="text-slate-400" />
+                                                                                    <span className="text-sm font-bold text-slate-700">{platform}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Resources & Risk */}
+                                    {(selectedSolution.resources_needed || selectedSolution.risk_mitigation) && (
+                                        <div className="grid grid-cols-12 gap-6 mb-12">
+                                            {/* Resources Needed */}
+                                            {selectedSolution.resources_needed && Array.isArray(selectedSolution.resources_needed) && selectedSolution.resources_needed.length > 0 && (
+                                                <div className="col-span-12 md:col-span-6 bg-white rounded-xl border border-slate-200 p-6">
+                                                    <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center space-x-2">
+                                                        <Briefcase size={18} className="text-slate-900 stroke-current" strokeWidth={1.5} />
+                                                        <span>所需资源</span>
+                                                    </h3>
+                                                    <ul className="space-y-3">
+                                                        {selectedSolution.resources_needed.map((resource, i) => (
+                                                            <li key={i} className="flex items-start space-x-3">
+                                                                <div className="w-2 h-2 rounded-full bg-indigo-500 mt-2.5 flex-shrink-0"></div>
+                                                                <p className="text-base text-slate-700 leading-7">{resource}</p>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+
+                                            {/* Risk Mitigation */}
+                                            {selectedSolution.risk_mitigation && (
+                                                <div className="col-span-12 md:col-span-6 bg-white rounded-xl border border-red-200 p-6">
+                                                    <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center space-x-2">
+                                                        <AlertTriangle size={18} className="text-slate-900 stroke-current" strokeWidth={1.5} />
+                                                        <span>风险缓解</span>
+                                                    </h3>
+                                                    <p className="text-base text-slate-700 leading-7">
+                                                        {selectedSolution.risk_mitigation}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Footer */}
+                                    <div className="text-center mb-8">
+                                        <p className="text-xs font-bold text-slate-300 uppercase tracking-[0.3em]">赛力斯 GEO 优化方案 • 2025</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 确保 DOM 加载完成后再渲染
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+
+        function initApp() {
+            try {
+                const rootElement = document.getElementById('root');
+                if (!rootElement) {
+                    console.error('找不到 #root 元素');
+                    document.body.innerHTML = '<div style="padding: 20px; color: red;">错误：找不到根元素 #root</div>';
+                    return;
+                }
+
+                const root = createRoot(rootElement);
+                root.render(<App />);
+                console.log('React 应用已成功渲染');
+            } catch (error) {
+                console.error('React 渲染错误:', error);
+                const rootElement = document.getElementById('root');
+                if (rootElement) {
+                    rootElement.innerHTML = `
+                        <div style="padding: 40px; text-align: center; color: #dc2626;">
+                            <h2 style="font-size: 24px; margin-bottom: 16px;">应用加载失败</h2>
+                            <p style="margin-bottom: 16px;">${error.message}</p>
+                            <pre style="background: #f3f4f6; padding: 16px; border-radius: 8px; text-align: left; overflow: auto;">${error.stack || error.toString()}</pre>
+                            <button onclick="window.location.reload()" style="margin-top: 16px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">重新加载</button>
+                        </div>
+                    `;
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

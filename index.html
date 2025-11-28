@@ -1,669 +1,808 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AITO AI 声誉全景监测系统 (Pro)</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Babel 用于解析 JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- 自定义样式 -->
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
-        
-        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; }
-        
-        /* 自定义滚动条 */
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AITO AI 声誉全景监测系统 (Pro)</title>
 
-        /* 隐藏横向滚动条 */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-        /* 动画 */
-        @keyframes fade-in-up {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-up { animation: fade-in-up 0.4s ease-out forwards; }
-        
-        /* 侧边栏折叠动画 */
-        .sidebar-collapsed {
-            transform: translateX(-100%);
-        }
-        
-        .sidebar-expanded {
-            transform: translateX(0);
-        }
-        
-        /* 移动端遮罩层 */
-        .overlay {
-            backdrop-filter: blur(4px);
-        }
-        
-        /* 展开按钮动画 */
-        @keyframes pulse-glow {
-            0%, 100% { 
-                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
-            }
-            50% { 
-                box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
-            }
-        }
-        
-        .btn-expand {
-            animation: pulse-glow 2s ease-in-out infinite;
-        }
-        
-        @keyframes slide-right {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        
-        .animate-slide-right {
-            animation: slide-right 0.3s ease-out;
-        }
-    </style>
+  <!-- Babel 用于解析 JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- 自定义样式 -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+
+    body {
+      font-family: 'Inter', 'Noto Sans SC', sans-serif;
+      background-color: #f8fafc;
+      /* 更干净的背景色 */
+    }
+
+    /* 自定义滚动条 - 更细更精致 */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 10px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background-color: #94a3b8;
+    }
+
+    /* 隐藏横向滚动条 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* 动画 */
+    @keyframes fade-in-up {
+      from {
+        opacity: 0;
+        transform: translateY(15px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in-up {
+      animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* 侧边栏折叠动画 */
+    .sidebar-collapsed {
+      transform: translateX(-100%);
+    }
+
+    .sidebar-expanded {
+      transform: translateX(0);
+    }
+
+    /* 移动端遮罩层 */
+    .overlay {
+      backdrop-filter: blur(8px);
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    /* 展开按钮动画 */
+    @keyframes pulse-glow {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+      }
+
+      50% {
+        box-shadow: 0 0 0 6px rgba(59, 130, 246, 0);
+      }
+    }
+
+    .btn-expand {
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+
+    @keyframes slide-right {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .animate-slide-right {
+      animation: slide-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* 玻璃拟态效果 */
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+  </style>
 </head>
-<body class="bg-[#F0F2F5] text-slate-900 overflow-hidden">
 
-    <div id="root"></div>
+<body class="bg-slate-50 text-slate-800 overflow-hidden">
 
-    <!-- React 应用逻辑 -->
-    <script type="text/babel" data-type="module">
-        import React, { useState, useMemo } from 'https://esm.sh/react@18.2.0';
-        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
-        import { 
-            ShieldAlert, ShieldCheck, AlertTriangle, Search, ChevronRight, 
-            Heart, TrendingUp, Zap, FileText, CheckCircle2, BarChart3, 
-            Database, Battery, DollarSign, Lock, Users, Smartphone, 
-            MapPin, Filter, Factory, Crown, Layers, Activity, MessageSquare,
-            AlertCircle, Menu, X, ChevronLeft
-        } from 'https://esm.sh/lucide-react@0.292.0?bundle';
+  <div id="root"></div>
 
-        // --- 核心数据源 (从外部JSON文件加载) ---
-        // 数据将从 analysis_results/ai_reputation_analysis_20251119_163327.json 动态加载
+  <!-- React 应用逻辑 -->
+  <script type="text/babel" data-type="module">
+    import React, { useState, useMemo } from 'https://esm.sh/react@18.2.0';
+    import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
+    import {
+      ShieldAlert, ShieldCheck, AlertTriangle, Search, ChevronRight,
+      Heart, TrendingUp, Zap, FileText, CheckCircle2, BarChart3,
+      Database, Battery, DollarSign, Lock, Users, Smartphone,
+      MapPin, Filter, Factory, Crown, Layers, Activity, MessageSquare,
+      AlertCircle, Menu, X, ChevronLeft, Flag
+    } from 'https://esm.sh/lucide-react@0.292.0?bundle';
 
-        // --- 组件 ---
+    // --- 组件 ---
 
-        const StatusBadge = ({ status, text }) => {
-          const styles = {
-            high: "bg-red-100 text-red-700 border-red-200",
-            warning: "bg-amber-100 text-amber-800 border-amber-200",
-            safe: "bg-emerald-100 text-emerald-800 border-emerald-200",
-          };
-          
-          const icons = {
-            high: <ShieldAlert size={14} className="mr-1.5" />,
-            warning: <AlertCircle size={14} className="mr-1.5" />,
-            safe: <ShieldCheck size={14} className="mr-1.5" />,
-          };
+    const StatusBadge = ({ status, text }) => {
+      const styles = {
+        high: "bg-red-50 text-red-600 border-red-100 ring-red-500/10",
+        warning: "bg-amber-50 text-amber-600 border-amber-100 ring-amber-500/10",
+        safe: "bg-emerald-50 text-emerald-600 border-emerald-100 ring-emerald-500/10",
+      };
 
-          return (
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${styles[status] || styles.safe} transition-colors duration-200 shadow-sm`}>
-              {icons[status]}
-              {text}
-            </span>
-          );
-        };
+      const icons = {
+        high: <ShieldAlert size={13} className="mr-1.5" />,
+        warning: <AlertCircle size={13} className="mr-1.5" />,
+        safe: <ShieldCheck size={13} className="mr-1.5" />,
+      };
 
-        const CategoryIcon = ({ category, className="" }) => {
-          const map = {
-            Brand: <Heart className={`text-rose-500 ${className}`} size={16} />,
-            Tech: <Database className={`text-blue-500 ${className}`} size={16} />,
-            Safety: <ShieldCheck className={`text-emerald-500 ${className}`} size={16} />,
-            Product: <Smartphone className={`text-indigo-500 ${className}`} size={16} />,
-            Service: <Zap className={`text-yellow-500 ${className}`} size={16} />,
-            Crisis: <AlertTriangle className={`text-red-500 ${className}`} size={16} />,
-            Value: <DollarSign className={`text-green-600 ${className}`} size={16} />,
-            Privacy: <Lock className={`text-slate-500 ${className}`} size={16} />,
-            Manufacturing: <Factory className={`text-purple-500 ${className}`} size={16} />,
-            Competitor: <BarChart3 className={`text-orange-500 ${className}`} size={16} />,
-            Eco: <Layers className={`text-cyan-500 ${className}`} size={16} />,
-          };
-          return map[category] || <FileText className={`text-slate-400 ${className}`} size={16} />;
-        };
+      return (
+        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ring-1 ${styles[status] || styles.safe} transition-all duration-300`}>
+          {icons[status]}
+          {text}
+        </span>
+      );
+    };
 
-        const DetailSection = ({ title, icon: Icon, children, className = "" }) => (
-          <div className={`mb-8 group ${className}`}>
-            <h3 className="flex items-center text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-100 pb-2 group-hover:text-blue-600 transition-colors">
-              <Icon size={14} className="mr-2 text-slate-400 group-hover:text-blue-500 transition-colors" />
-              {title}
-            </h3>
-            <div className="text-sm leading-7 text-slate-700">
-              {children}
+    const CategoryIcon = ({ category, className = "" }) => {
+      const map = {
+        Brand: <Heart className={`text-rose-500 ${className}`} size={16} />,
+        Tech: <Database className={`text-blue-500 ${className}`} size={16} />,
+        Safety: <ShieldCheck className={`text-emerald-500 ${className}`} size={16} />,
+        Product: <Smartphone className={`text-indigo-500 ${className}`} size={16} />,
+        Service: <Zap className={`text-yellow-500 ${className}`} size={16} />,
+        Crisis: <AlertTriangle className={`text-red-500 ${className}`} size={16} />,
+        Value: <DollarSign className={`text-green-600 ${className}`} size={16} />,
+        Privacy: <Lock className={`text-slate-500 ${className}`} size={16} />,
+        Manufacturing: <Factory className={`text-purple-500 ${className}`} size={16} />,
+        Competitor: <BarChart3 className={`text-orange-500 ${className}`} size={16} />,
+        Eco: <Layers className={`text-cyan-500 ${className}`} size={16} />,
+      };
+      return map[category] || <FileText className={`text-slate-400 ${className}`} size={16} />;
+    };
+
+    const DetailSection = ({ title, icon: Icon, children, className = "" }) => (
+      <div className={`mb-8 group ${className}`}>
+        <h3 className="flex items-center text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 pb-2 border-b border-slate-100 group-hover:border-blue-100 transition-colors">
+          <span className="bg-slate-50 p-1.5 rounded-md mr-2 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+            <Icon size={14} className="text-slate-500 group-hover:text-blue-600 transition-colors" />
+          </span>
+          <span className="group-hover:text-slate-600 transition-colors">{title}</span>
+        </h3>
+        <div className="text-sm leading-7 text-slate-600 pl-1">
+          {children}
+        </div>
+      </div>
+    );
+
+    // --- 主应用 ---
+
+    const App = () => {
+      const [selectedId, setSelectedId] = useState(null);
+      const [filterStatus, setFilterStatus] = useState('all');
+      const [data, setData] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+      const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+      const [showDetailOnMobile, setShowDetailOnMobile] = useState(false);
+
+      // Filter States
+      const [filterCategory, setFilterCategory] = useState('all');
+      const [filterPlatform, setFilterPlatform] = useState('all');
+      const [showFilters, setShowFilters] = useState(false);
+
+      // Derived Options
+      const categories = useMemo(() => [...new Set(data.map(i => i.category))].filter(Boolean).sort(), [data]);
+      const platforms = useMemo(() => [...new Set(data.map(i => i.platform))].filter(Boolean).sort(), [data]);
+
+      React.useEffect(() => {
+        fetch('./analysis_results/files_index.json')
+          .then(response => {
+            if (!response.ok) throw new Error('无法加载文件索引，请先运行 generate_index.py 生成索引');
+            return response.json();
+          })
+          .then(indexData => {
+            if (!indexData.files || indexData.files.length === 0) throw new Error('索引文件中没有找到 JSON 数据文件');
+            const filePromises = indexData.files.map(filename =>
+              fetch(`./analysis_results/${filename}`)
+                .then(response => {
+                  if (!response.ok) throw new Error(`加载失败: ${filename}`);
+                  return response.json();
+                })
+                .then(jsonData => ({ filename, data: jsonData }))
+                .catch(err => {
+                  console.error(`加载文件 ${filename} 失败:`, err);
+                  return null;
+                })
+            );
+            return Promise.all(filePromises);
+          })
+          .then(filesData => {
+            const validFiles = filesData.filter(f => f !== null && f.data && Array.isArray(f.data));
+            if (validFiles.length === 0) throw new Error('没有成功加载任何数据文件');
+
+            let globalId = 1;
+            const allTransformedData = [];
+            validFiles.forEach(({ filename, data }) => {
+              const transformedData = data.map((item, index) => ({
+                id: globalId++,
+                category: getCategoryFromQuery(item.User_Query),
+                sourceFile: filename,
+                platform: item.Platform,
+                query: item.User_Query,
+                response: item.AI_Response,
+                analysis: {
+                  safety: {
+                    contentFlag: item.Safety_Content_Flag || '否',
+
+                    issueType: item.Safety_Issue_Type || '无',
+                    description: item.Safety_Description || '不涉及产品安全性话题'
+                  },
+                  security: {
+                    status: getStatusFromLabel(item.Security_Status),
+                    label: item.Security_Status,
+                    reason: item.Risk_Diagnosis
+                  },
+                  diagnosis: item.Risk_Diagnosis,
+                  factCheck: {
+                    status: 'accurate',
+                    text: item.Fact_Tech
+                  },
+                  brandImpression: {
+                    score: getBrandScore(item.Brand_Impression),
+                    label: item.Brand_Impression.split('分')[0] || '中等',
+                    text: item.Brand_Impression
+                  },
+                  compPosition: {
+                    trend: getTrendFromPosition(item.Comp_Position),
+                    text: item.Comp_Position
+                  },
+                  strategy: item.Strategy_Action
+                }
+              }));
+              allTransformedData.push(...transformedData);
+            });
+            setData(allTransformedData);
+            if (allTransformedData.length > 0) {
+              if (window.innerWidth >= 768) setSelectedId(allTransformedData[0].id);
+              else setSelectedId(null);
+            }
+            setLoading(false);
+          })
+          .catch(err => {
+            setError(err.message);
+            setLoading(false);
+          });
+      }, []);
+
+      const getCategoryFromQuery = (query) => {
+        if (query.includes('智驾') || query.includes('ADS') || query.includes('AEB')) return 'Tech';
+        if (query.includes('安全') || query.includes('事故')) return 'Safety';
+        if (query.includes('M7') || query.includes('M8') || query.includes('M9')) return 'Product';
+        if (query.includes('服务')) return 'Service';
+        if (query.includes('华为') || query.includes('赛力斯')) return 'Brand';
+        if (query.includes('理想') || query.includes('蔚来') || query.includes('比亚迪')) return 'Competitor';
+        if (query.includes('价格') || query.includes('值')) return 'Value';
+        return 'Product';
+      };
+
+      const getStatusFromLabel = (label) => {
+        if (label.includes('🔴') || label.includes('高危')) return 'high';
+        if (label.includes('🟡') || label.includes('预警')) return 'warning';
+        return 'safe';
+      };
+
+      const getBrandScore = (text) => {
+        const match = text.match(/(\d+(\.\d+)?)\s*分/);
+        if (match) {
+          const score = parseFloat(match[1]);
+          return Math.min(5, Math.max(1, Math.round(score)));
+        }
+        return 3;
+      };
+
+      const getTrendFromPosition = (text) => {
+        if (text.includes('🏆') || text.includes('优势')) return 'up';
+        if (text.includes('📉') || text.includes('劣势')) return 'down';
+        return 'neutral';
+      };
+
+      const selectedItem = useMemo(() => data.find(item => item.id === selectedId), [selectedId, data]);
+
+      const filteredData = useMemo(() => {
+        return data.filter(item => {
+          // Status Filter
+          if (filterStatus !== 'all') {
+            if (filterStatus === 'high' && item.analysis.security.status !== 'high') return false;
+            if (filterStatus === 'warning' && item.analysis.security.status !== 'warning') return false;
+            if (filterStatus === 'safe' && item.analysis.security.status !== 'safe') return false;
+          }
+
+          // Category Filter
+          if (filterCategory !== 'all' && item.category !== filterCategory) return false;
+
+          // Platform Filter
+          if (filterPlatform !== 'all' && item.platform !== filterPlatform) return false;
+
+          return true;
+        });
+      }, [filterStatus, filterCategory, filterPlatform, data]);
+
+      const highRisk = data.filter(i => i.analysis.security?.status === 'high').length;
+      const warning = data.filter(i => i.analysis.security?.status === 'warning').length;
+      const safe = data.filter(i => i.analysis.security?.status === 'safe').length;
+
+      if (loading) {
+        return (
+          <div className="flex h-screen bg-slate-50 items-center justify-center">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-blue-600 mb-4"></div>
+              <p className="text-slate-500 font-medium text-sm tracking-wide">SYSTEM INITIALIZING...</p>
             </div>
           </div>
         );
+      }
 
-        // --- 主应用 ---
+      if (error) {
+        return (
+          <div className="flex h-screen bg-slate-50 items-center justify-center">
+            <div className="text-center max-w-md p-8 bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100">
+              <AlertCircle className="mx-auto text-red-500 mb-4" size={40} />
+              <h2 className="text-lg font-bold text-slate-900 mb-2">System Error</h2>
+              <p className="text-slate-500 mb-6 text-sm">{error}</p>
+              <button onClick={() => window.location.reload()} className="px-6 py-2 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors">
+                Retry Connection
+              </button>
+            </div>
+          </div>
+        );
+      }
 
-        const App = () => {
-          const [selectedId, setSelectedId] = useState(null);
-          const [filterStatus, setFilterStatus] = useState('all');
-          const [data, setData] = useState([]);
-          const [loading, setLoading] = useState(true);
-          const [error, setError] = useState(null);
-          // 桌面端默认展开侧边栏，移动端默认展开侧边栏（首次加载）
-          const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-          const [showDetailOnMobile, setShowDetailOnMobile] = useState(false);
+      if (!loading && data.length === 0) {
+        return (
+          <div className="flex h-screen bg-slate-50 items-center justify-center">
+            <div className="text-center max-w-md">
+              <Database className="mx-auto text-slate-300 mb-4" size={48} />
+              <h2 className="text-xl font-bold text-slate-900 mb-2">No Data Available</h2>
+              <p className="text-slate-500">Please check data source configuration.</p>
+            </div>
+          </div>
+        );
+      }
 
-          // 加载外部JSON数据 - 自动加载 analysis_results 目录下的所有文件
-          React.useEffect(() => {
-            // 首先加载文件索引
-            fetch('./analysis_results/files_index.json')
-              .then(response => {
-                if (!response.ok) throw new Error('无法加载文件索引，请先运行 generate_index.py 生成索引');
-                return response.json();
-              })
-              .then(indexData => {
-                if (!indexData.files || indexData.files.length === 0) {
-                  throw new Error('索引文件中没有找到 JSON 数据文件');
-                }
-                
-                // 并行加载所有 JSON 文件
-                const filePromises = indexData.files.map(filename => 
-                  fetch(`./analysis_results/${filename}`)
-                    .then(response => {
-                      if (!response.ok) throw new Error(`加载失败: ${filename}`);
-                      return response.json();
-                    })
-                    .then(jsonData => ({ filename, data: jsonData }))
-                    .catch(err => {
-                      console.error(`加载文件 ${filename} 失败:`, err);
-                      return null;
-                    })
-                );
-                
-                return Promise.all(filePromises);
-              })
-              .then(filesData => {
-                // 过滤掉加载失败的文件
-                const validFiles = filesData.filter(f => f !== null && f.data && Array.isArray(f.data));
-                
-                if (validFiles.length === 0) {
-                  throw new Error('没有成功加载任何数据文件');
-                }
-                
-                // 合并所有文件的数据
-                let globalId = 1;
-                const allTransformedData = [];
-                
-                validFiles.forEach(({ filename, data }) => {
-                  const transformedData = data.map((item, index) => ({
-                    id: globalId++,
-                    category: getCategoryFromQuery(item.User_Query),
-                    sourceFile: filename,
-                    platform: item.Platform,
-                    query: item.User_Query,
-                    response: item.AI_Response,
-                    analysis: {
-                      security: {
-                        status: getStatusFromLabel(item.Security_Status),
-                        label: item.Security_Status,
-                        reason: item.Risk_Diagnosis
-                      },
-                      diagnosis: item.Risk_Diagnosis,
-                      factCheck: {
-                        status: 'accurate',
-                        text: item.Fact_Tech
-                      },
-                      brandImpression: {
-                        score: getBrandScore(item.Brand_Impression),
-                        label: item.Brand_Impression.split('分')[0] || '中等',
-                        text: item.Brand_Impression
-                      },
-                      compPosition: {
-                        trend: getTrendFromPosition(item.Comp_Position),
-                        text: item.Comp_Position
-                      },
-                      strategy: item.Strategy_Action
-                    }
-                  }));
-                  allTransformedData.push(...transformedData);
-                });
-                
-                console.log(`✅ 成功加载 ${validFiles.length} 个文件，共 ${allTransformedData.length} 条数据`);
-                setData(allTransformedData);
-                
-                // 桌面端和平板端自动选中第一项，移动端不自动选中让用户主动选择
-                if (allTransformedData.length > 0) {
-                  if (window.innerWidth >= 768) {
-                    setSelectedId(allTransformedData[0].id);
-                  } else {
-                    setSelectedId(null); // 移动端初始不选中
-                  }
-                }
-                setLoading(false);
-              })
-              .catch(err => {
-                setError(err.message);
-                setLoading(false);
-              });
-          }, []);
+      return (
+        <div className="flex h-screen bg-[#F8FAFC] font-sans text-slate-900 overflow-hidden selection:bg-blue-100 selection:text-blue-900 relative">
 
-          // 辅助函数：从查询内容推断分类
-          const getCategoryFromQuery = (query) => {
-            if (query.includes('智驾') || query.includes('ADS') || query.includes('AEB')) return 'Tech';
-            if (query.includes('安全') || query.includes('事故')) return 'Safety';
-            if (query.includes('M7') || query.includes('M8') || query.includes('M9')) return 'Product';
-            if (query.includes('服务')) return 'Service';
-            if (query.includes('华为') || query.includes('赛力斯')) return 'Brand';
-            if (query.includes('理想') || query.includes('蔚来') || query.includes('比亚迪')) return 'Competitor';
-            if (query.includes('价格') || query.includes('值')) return 'Value';
-            return 'Product';
-          };
+          <div className={`md:hidden fixed inset-0 z-20 transition-opacity duration-300 ${sidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm" onClick={() => setSidebarCollapsed(true)}></div>
+          </div>
 
-          // 辅助函数：从状态标签获取状态值
-          const getStatusFromLabel = (label) => {
-            if (label.includes('🔴') || label.includes('高危')) return 'high';
-            if (label.includes('🟡') || label.includes('预警')) return 'warning';
-            return 'safe';
-          };
-
-          // 辅助函数：从品牌印象提取分数
-          const getBrandScore = (text) => {
-            const match = text.match(/(\d+(\.\d+)?)\s*分/);
-            if (match) {
-              const score = parseFloat(match[1]);
-              return Math.min(5, Math.max(1, Math.round(score)));
-            }
-            return 3;
-          };
-
-          // 辅助函数：从竞品站位获取趋势
-          const getTrendFromPosition = (text) => {
-            if (text.includes('🏆') || text.includes('优势')) return 'up';
-            if (text.includes('📉') || text.includes('劣势')) return 'down';
-            return 'neutral';
-          };
-
-          const selectedItem = useMemo(() => data.find(item => item.id === selectedId), [selectedId, data]);
-          
-          const filteredData = useMemo(() => {
-            if (filterStatus === 'all') return data;
-            return data.filter(item => {
-                if (filterStatus === 'high') return item.analysis.security.status === 'high';
-                if (filterStatus === 'warning') return item.analysis.security.status === 'warning';
-                if (filterStatus === 'safe') return item.analysis.security.status === 'safe';
-                return true;
-            });
-          }, [filterStatus, data]);
-
-          // Stats
-          const highRisk = data.filter(i => i.analysis.security?.status === 'high').length;
-          const warning = data.filter(i => i.analysis.security?.status === 'warning').length;
-          const safe = data.filter(i => i.analysis.security?.status === 'safe').length;
-
-          // 加载状态
-          if (loading) {
-            return (
-              <div className="flex h-screen bg-[#F0F2F5] items-center justify-center">
-                <div className="text-center">
-                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-                  <p className="text-slate-600 font-medium">正在加载数据...</p>
-                </div>
-              </div>
-            );
-          }
-
-          // 错误状态
-          if (error) {
-            return (
-              <div className="flex h-screen bg-[#F0F2F5] items-center justify-center">
-                <div className="text-center max-w-md">
-                  <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
-                  <h2 className="text-xl font-bold text-slate-900 mb-2">数据加载失败</h2>
-                  <p className="text-slate-600 mb-4">{error}</p>
-                  <button 
-                    onClick={() => window.location.reload()} 
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                  >
-                    重新加载
-                  </button>
-                </div>
-              </div>
-            );
-          }
-
-          // 数据为空状态
-          if (!loading && data.length === 0) {
-            return (
-              <div className="flex h-screen bg-[#F0F2F5] items-center justify-center">
-                <div className="text-center max-w-md">
-                  <Database className="mx-auto text-slate-400 mb-4" size={48} />
-                  <h2 className="text-xl font-bold text-slate-900 mb-2">暂无数据</h2>
-                  <p className="text-slate-600">JSON文件中没有找到分析数据</p>
-                </div>
-              </div>
-            );
-          }
-
-          return (
-            <div className="flex h-screen bg-[#F0F2F5] font-sans text-slate-900 overflow-hidden selection:bg-blue-100 selection:text-blue-900 relative">
-              
-              {/* Mobile Overlay - 只在移动端且侧边栏展开时显示 */}
-              <div 
-                className={`md:hidden fixed inset-0 bg-black/20 overlay z-10 transition-opacity ${
-                  sidebarCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
-                }`}
-                onClick={() => setSidebarCollapsed(true)}
-              ></div>
-              
-              {/* Left Sidebar: List View */}
-              <div className={`
+          {/* Left Sidebar */}
+          <div className={`
                 fixed md:relative
-                bg-white border-r border-slate-200 
-                flex flex-col h-full z-20 shadow-xl
-                transition-all duration-300 ease-in-out
-                ${sidebarCollapsed 
-                  ? '-translate-x-full md:translate-x-0 w-full md:w-0 md:border-0 md:shadow-none' 
-                  : 'translate-x-0 w-full md:w-[420px] lg:w-[480px]'
-                }
+                bg-white/80 border-r border-slate-200/60
+                flex flex-col h-full z-30 backdrop-blur-xl
+                transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] overflow-hidden
+                ${sidebarCollapsed
+              ? '-translate-x-full md:translate-x-0 w-full md:w-0 md:border-0 md:shadow-none opacity-0 md:opacity-0 pointer-events-none'
+              : 'translate-x-0 w-full md:w-[300px] lg:w-[340px] shadow-2xl shadow-slate-200/50 opacity-100'
+            }
               `}>
-                {/* Header */}
-                <div className="p-6 border-b border-slate-100 bg-white">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center shadow-lg shadow-slate-200">
-                            <Activity size={16} className="text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-sm font-bold text-slate-900">AITO 声誉监测</h1>
-                            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Intelligence Pro</p>
-                        </div>
+            {/* Sidebar Header */}
+            <div className="p-6 pb-2">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center space-x-3">
+                  <div className="w-9 h-9 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-slate-900/20">
+                    <Activity size={18} className="text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-sm font-bold text-slate-900 tracking-tight">AITO 声誉监测</h1>
+                    <p className="text-[10px] text-slate-400 font-medium tracking-[0.2em] uppercase mt-0.5">Intelligence Pro</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSidebarCollapsed(true)}
+                  className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+              </div>
+
+              {/* Navigation Button to Solutions */}
+              <div className="mb-4">
+                <a
+                  href="./solution_showcase.html"
+                  className="group flex items-center justify-between w-full px-4 py-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100/60 hover:border-blue-200 hover:shadow-md transition-all duration-200"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                      <Zap size={16} className="text-white" />
+
+
                     </div>
-                    <button 
-                      onClick={() => setSidebarCollapsed(true)}
-                      className="group relative p-2 rounded-xl hover:bg-gradient-to-br hover:from-slate-50 hover:to-slate-100 transition-all duration-200 text-slate-600 hover:text-slate-900 hover:shadow-md active:scale-95 border border-transparent hover:border-slate-200"
-                      title="折叠侧边栏"
-                    >
-                      <ChevronLeft size={20} strokeWidth={2.5} />
-                      
-                      {/* 悬停提示 */}
-                      <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                        <div className="bg-slate-900 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-lg">
-                          折叠菜单
-                          <div className="absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-slate-900"></div>
-                        </div>
-                      </div>
-                    </button>
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-slate-900">查看解决方案</p>
+                      <p className="text-[10px] text-slate-500 group-hover:text-slate-600 transition-colors">GEO Solutions</p>
+                    </div>
                   </div>
-                  
-                  {/* Stats Cards */}
-                  <div className="grid grid-cols-3 gap-3 mt-2">
-                    <button onClick={() => setFilterStatus('high')} className={`p-3 rounded-xl border flex flex-col items-center transition-all ${filterStatus === 'high' ? 'bg-red-50 border-red-200 ring-2 ring-red-100' : 'bg-white border-slate-100 hover:border-red-100 hover:bg-red-50/50'}`}>
-                      <span className="text-[10px] font-bold text-red-500 uppercase mb-1">高危</span>
-                      <span className="text-2xl font-bold text-slate-800">{highRisk}</span>
-                    </button>
-                    <button onClick={() => setFilterStatus('warning')} className={`p-3 rounded-xl border flex flex-col items-center transition-all ${filterStatus === 'warning' ? 'bg-amber-50 border-amber-200 ring-2 ring-amber-100' : 'bg-white border-slate-100 hover:border-amber-100 hover:bg-amber-50/50'}`}>
-                      <span className="text-[10px] font-bold text-amber-500 uppercase mb-1">预警</span>
-                      <span className="text-2xl font-bold text-slate-800">{warning}</span>
-                    </button>
-                    <button onClick={() => setFilterStatus('safe')} className={`p-3 rounded-xl border flex flex-col items-center transition-all ${filterStatus === 'safe' ? 'bg-emerald-50 border-emerald-200 ring-2 ring-emerald-100' : 'bg-white border-slate-100 hover:border-emerald-100 hover:bg-emerald-50/50'}`}>
-                      <span className="text-[10px] font-bold text-emerald-500 uppercase mb-1">安全</span>
-                      <span className="text-2xl font-bold text-slate-800">{safe}</span>
-                    </button>
-                  </div>
+                  <ChevronRight size={16} className="text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
+                </a>
+              </div>
+
+              {/* Filter Tabs - 统一风格 */}
+              <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100/80 rounded-xl mb-2">
+                {[
+                  { id: 'high', label: '高危', count: highRisk, color: 'text-red-600', activeBg: 'bg-white text-red-600 shadow-sm' },
+                  { id: 'warning', label: '预警', count: warning, color: 'text-amber-600', activeBg: 'bg-white text-amber-600 shadow-sm' },
+                  { id: 'safe', label: '安全', count: safe, color: 'text-emerald-600', activeBg: 'bg-white text-emerald-600 shadow-sm' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setFilterStatus(tab.id === filterStatus ? 'all' : tab.id)}
+                    className={`
+                                relative py-2.5 rounded-lg flex flex-col items-center justify-center transition-all duration-200
+                                ${filterStatus === tab.id
+                        ? tab.activeBg
+                        : 'hover:bg-white/50 text-slate-500'
+                      }
+                            `}
+                  >
+                    <span className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${filterStatus === tab.id ? '' : 'opacity-70'}`}>{tab.label}</span>
+                    <span className={`text-lg font-bold leading-none ${filterStatus === tab.id ? '' : 'text-slate-700'}`}>{tab.count}</span>
+                    {filterStatus === tab.id && <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current opacity-50"></div>}
+                  </button>
+                ))}
+              </div>
+
+              {/* Status Bar & Advanced Filters */}
+              <div className="flex flex-col px-2 py-2 gap-2 bg-slate-50/50 rounded-lg mx-1 mb-2 border border-slate-100/50">
+                <div className="flex justify-between items-center text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={`flex items-center gap-1.5 hover:text-blue-600 transition-colors group ${showFilters ? 'text-blue-600' : ''}`}
+                  >
+                    <Filter size={10} className="group-hover:scale-110 transition-transform" />
+                    <span>{filterStatus === 'all' ? 'All Records' : `${filterStatus} Priority`}</span>
+                    <ChevronRight size={10} className={`transform transition-transform duration-300 ${showFilters ? 'rotate-90' : ''}`} />
+                  </button>
+                  <span className="bg-white border border-slate-200 px-2 py-0.5 rounded-full text-slate-500 shadow-sm">{filteredData.length}</span>
                 </div>
 
-                {/* Filter Info Bar */}
-                <div className="px-6 py-2 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-xs text-slate-500">
-                    <span className="flex items-center"><Filter size={12} className="mr-1.5"/> {filterStatus === 'all' ? '全部数据' : filterStatus === 'high' ? '高危数据' : filterStatus === 'warning' ? '预警数据' : '安全数据'}</span>
-                    <span className="font-mono opacity-60">{filteredData.length} 条记录</span>
+                <div className={`grid grid-cols-2 gap-2 overflow-hidden transition-all duration-300 ease-in-out ${showFilters ? 'max-h-20 opacity-100 pt-1' : 'max-h-0 opacity-0'}`}>
+                  <select
+                    value={filterCategory}
+                    onChange={(e) => setFilterCategory(e.target.value)}
+                    className="w-full bg-white border border-slate-200 text-slate-600 text-[10px] rounded-lg p-1.5 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/20 font-medium cursor-pointer"
+                  >
+                    <option value="all">全部分类</option>
+                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <select
+                    value={filterPlatform}
+                    onChange={(e) => setFilterPlatform(e.target.value)}
+                    className="w-full bg-white border border-slate-200 text-slate-600 text-[10px] rounded-lg p-1.5 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/20 font-medium cursor-pointer"
+                  >
+                    <option value="all">全部模型</option>
+                    {platforms.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
                 </div>
+              </div>
+            </div>
 
-                {/* Scrollable List */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3 bg-slate-50/50">
-                  {filteredData.map((item) => (
-                    <div 
-                      key={item.id}
-                      onClick={() => {
-                        setSelectedId(item.id);
-                        // 在移动端点击后自动折叠侧边栏显示详情
-                        if (window.innerWidth < 768) {
-                          setSidebarCollapsed(true);
-                          setShowDetailOnMobile(true);
-                        }
-                      }}
-                      className={`group p-4 rounded-xl cursor-pointer transition-all duration-200 border relative ${
-                        selectedId === item.id 
-                          ? 'bg-white shadow-md border-blue-500/40 ring-1 ring-blue-500/10 z-10' 
-                          : 'bg-white border-slate-200/60 hover:border-slate-300 hover:shadow-sm'
-                      }`}
-                    >
-                      {selectedId === item.id && <div className="absolute left-0 top-4 bottom-4 w-1 bg-blue-500 rounded-r-full"></div>}
-                      
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center space-x-2 pl-2">
-                          <CategoryIcon category={item.category} />
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.category}</span>
-                        </div>
-                        <div className={`w-2 h-2 rounded-full ${
-                            item.analysis.security.status === 'high' ? 'bg-red-500' : 
-                            item.analysis.security.status === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'
-                        }`}></div>
-                      </div>
-                      
-                      <h3 className={`text-[13px] font-medium leading-relaxed pl-2 ${selectedId === item.id ? 'text-slate-900' : 'text-slate-600 group-hover:text-slate-900'}`}>
-                        {item.query}
-                      </h3>
-                      
-                      <div className="flex items-center justify-between mt-3 pl-2">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium">{item.platform}</span>
-                          </div>
-                          <span className={`text-[10px] font-bold ${
-                              item.analysis.security.status === 'high' ? 'text-red-500' : 
-                              item.analysis.security.status === 'warning' ? 'text-amber-500' : 'text-emerald-600'
-                          }`}>
-                              {item.analysis.security.label}
-                          </span>
-                      </div>
+            {/* List */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-3 space-y-1.5">
+              {filteredData.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => {
+                    setSelectedId(item.id);
+                    if (window.innerWidth < 768) {
+                      setSidebarCollapsed(true);
+                      setShowDetailOnMobile(true);
+                    }
+                  }}
+                  className={`
+                        group px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 border relative
+                        ${selectedId === item.id
+                      ? 'bg-blue-50/50 border-blue-500/20 shadow-sm'
+                      : 'bg-white border-transparent hover:border-slate-200 hover:shadow-sm hover:bg-white'
+                    }
+                      `}
+                >
+                  <div className="flex justify-between items-start mb-1.5">
+                    <div className="flex items-center space-x-2">
+                      <CategoryIcon category={item.category} className={selectedId === item.id ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'} />
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.category}</span>
+                    </div>
+                    <div className={`w-1.5 h-1.5 rounded-full ${item.analysis.security.status === 'high' ? 'bg-red-500 shadow-red-500/50 shadow-[0_0_8px]' :
+                      item.analysis.security.status === 'warning' ? 'bg-amber-500 shadow-amber-500/50 shadow-[0_0_8px]' : 'bg-emerald-500'
+                      }`}></div>
+                  </div>
+
+                  <h3 className={`text-[13px] font-medium leading-relaxed line-clamp-2 ${selectedId === item.id ? 'text-blue-900' : 'text-slate-600 group-hover:text-slate-900'}`}>
+                    {item.query}
+                  </h3>
+
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100/80 text-slate-500 font-medium border border-slate-100">{item.platform}</span>
+                    <span className={`text-[10px] font-bold tracking-tight ${item.analysis.security.status === 'high' ? 'text-red-500' :
+                      item.analysis.security.status === 'warning' ? 'text-amber-600' : 'text-emerald-600'
+                      }`}>
+                      {item.analysis.security.label}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 h-full flex flex-col bg-[#F8FAFC] overflow-hidden relative">
+            {/* Decorative BG */}
+            <div className="absolute inset-0 opacity-[0.4]" style={{ backgroundImage: 'radial-gradient(#e2e8f0 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
+
+            {/* Collapsed Sidebar Handle */}
+            {sidebarCollapsed && (
+              <div className="absolute left-0 top-0 bottom-0 z-40 w-16 hover:w-20 transition-all duration-300 group flex flex-col items-center pt-8 bg-transparent">
+                <button
+                  onClick={() => setSidebarCollapsed(false)}
+                  className="p-3 rounded-xl bg-white shadow-lg border border-slate-100 text-slate-600 hover:text-blue-600 hover:scale-110 transition-all duration-300"
+                >
+                  <Menu size={20} />
+                </button>
+                <div className="mt-8 flex flex-col gap-4">
+                  {[
+                    { color: 'bg-red-500', count: highRisk },
+                    { color: 'bg-amber-500', count: warning },
+                    { color: 'bg-emerald-500', count: safe }
+                  ].map((badge, i) => badge.count > 0 && (
+                    <div key={i} className="flex flex-col items-center animate-fade-in-up" style={{ animationDelay: `${i * 0.1}s` }}>
+                      <span className={`w-2 h-2 rounded-full ${badge.color} mb-1`}></span>
+                      <span className="text-[10px] font-bold text-slate-400">{badge.count}</span>
                     </div>
                   ))}
                 </div>
               </div>
+            )}
 
-              {/* Right Main Content */}
-              <div className="flex-1 h-full flex flex-col bg-[#F0F2F5] overflow-hidden relative">
-                 {/* Background Pattern */}
-                 <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{backgroundImage: 'radial-gradient(#475569 1px, transparent 1px)', backgroundSize: '24px 24px'}}></div>
-
-                 {/* 折叠状态下的左侧装饰条 */}
-                 {sidebarCollapsed && (
-                   <div className="hidden md:block absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 via-purple-500 to-pink-500 opacity-80 shadow-lg animate-slide-right"></div>
-                 )}
-
-                 {/* Toggle Sidebar Button - 显示在侧边栏折叠时 */}
-                 {sidebarCollapsed && (
-                   <div className="fixed top-6 left-6 z-30 animate-slide-right">
-                     <button 
-                       onClick={() => setSidebarCollapsed(false)}
-                       className="group relative p-4 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-2xl hover:shadow-blue-500/30 transition-all duration-300 hover:scale-105 active:scale-95 btn-expand"
-                       title="展开侧边栏"
-                     >
-                       <Menu size={22} className="text-white" strokeWidth={2.5} />
-                       
-                       {/* 小提示标签 */}
-                       <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                         <div className="bg-slate-900 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-lg">
-                           展开菜单
-                           <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900"></div>
-                         </div>
-                       </div>
-                       
-                       {/* 装饰性光效 */}
-                       <div className="absolute inset-0 rounded-2xl bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-                     </button>
-                     
-                     {/* 数据统计小徽章 - 只在有问题时显示 */}
-                     {(highRisk + warning) > 0 && (
-                       <div className="absolute -top-1 -right-1 h-6 w-6 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-lg border-2 border-white animate-pulse">
-                         {highRisk + warning}
-                       </div>
-                     )}
-                   </div>
-                 )}
-
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 lg:p-12 flex flex-col items-center w-full">
-                  {/* 移动端空状态 - 提示用户点击菜单选择 */}
-                  {!selectedItem && (
-                    <div className="flex items-center justify-center h-full w-full md:hidden">
-                      <div className="text-center px-8">
-                        <Menu className="mx-auto text-slate-300 mb-4" size={48} />
-                        <p className="text-slate-500 text-sm">请点击左上角菜单图标选择要查看的项目</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {selectedItem && (
-                  <div className="w-full max-w-5xl animate-fade-in-up">
-                    
-                    {/* Header Info */}
-                    <div className="flex justify-between items-center mb-6 px-2">
-                        <div className="flex items-center space-x-3">
-                            <div className="h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center border border-slate-100 text-slate-400 font-mono text-xs">
-                                #{selectedItem?.id.toString().padStart(2, '0')}
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Data Source</span>
-                                <span className="text-xs font-medium text-slate-600">{selectedItem?.sourceFile}</span>
-                            </div>
-                        </div>
-                        <StatusBadge status={selectedItem?.analysis?.security?.status} text={selectedItem?.analysis?.security?.label} />
-                    </div>
-
-                    {/* Main Card: Question & Answer */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-                      <div className="p-8 border-b border-slate-100">
-                        <h2 className="text-xl font-bold text-slate-900 leading-normal flex items-start">
-                            <MessageSquare className="text-blue-500 mt-1 mr-3 flex-shrink-0" size={20} />
-                            {selectedItem?.query}
-                        </h2>
-                      </div>
-                      
-                      <div className="p-8 bg-slate-50/50">
-                        <div className="relative">
-                            <div className="absolute -left-4 top-0 bottom-0 w-1 bg-slate-200 rounded-full"></div>
-                            <div className="flex items-center space-x-2 mb-3">
-                                <div className="flex items-center space-x-1.5 bg-white border border-slate-200 rounded-full px-2 py-1 shadow-sm">
-                                    <Smartphone size={10} className="text-slate-400"/>
-                                    <span className="text-[10px] font-bold text-slate-600 uppercase">{selectedItem?.platform} 回答</span>
-                                </div>
-                            </div>
-                            <p className="text-[15px] leading-7 text-slate-700 text-justify">
-                                {selectedItem?.response}
-                            </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Analysis Grid */}
-                    {selectedItem?.analysis && (
-                    <div className="grid grid-cols-12 gap-6">
-                      
-                      {/* Left: Security & Diagnosis (4 cols) */}
-                      <div className="col-span-12 lg:col-span-4 space-y-6">
-                        <div className={`rounded-2xl p-6 border h-full shadow-sm flex flex-col relative overflow-hidden ${
-                            selectedItem.analysis.security.status === 'high' ? 'bg-white border-red-200' : 
-                            selectedItem.analysis.security.status === 'warning' ? 'bg-white border-amber-200' : 'bg-white border-emerald-200'
-                        }`}>
-                          <div className={`absolute top-0 left-0 right-0 h-1.5 ${
-                              selectedItem.analysis.security.status === 'high' ? 'bg-red-500' : 
-                              selectedItem.analysis.security.status === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'
-                          }`}></div>
-                          
-                          <div className="mb-6">
-                            <div className="flex items-center space-x-2 mb-2">
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Risk Diagnosis</span>
-                            </div>
-                            <h3 className={`text-2xl font-bold ${
-                                selectedItem.analysis.security.status === 'high' ? 'text-red-600' : 
-                                selectedItem.analysis.security.status === 'warning' ? 'text-amber-600' : 'text-emerald-600'
-                            }`}>
-                                {selectedItem.analysis.diagnosis}
-                            </h3>
-                          </div>
-                          
-                          <div className="mt-auto pt-6 border-t border-dashed border-slate-200">
-                             <div className="flex items-start space-x-2">
-                                <AlertCircle size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
-                                <p className="text-xs text-slate-500 leading-5">
-                                  {selectedItem.analysis.security.reason}
-                                </p>
-                             </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right: 5C Dimensions (8 cols) */}
-                      <div className="col-span-12 lg:col-span-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-10">
-                          
-                          {/* 1. Fact Check */}
-                          <DetailSection title="事实核查 (Fact Check)" icon={CheckCircle2}>
-                            <div className="flex items-start p-3 bg-slate-50 rounded-lg border border-slate-100">
-                              <div className={`mt-1.5 w-2 h-2 rounded-full mr-2.5 flex-shrink-0 ${selectedItem.analysis.factCheck.status === 'accurate' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                              <span className="text-slate-700 font-medium text-[13px]">{selectedItem.analysis.factCheck.text}</span>
-                            </div>
-                          </DetailSection>
-
-                          {/* 2. Brand Impression */}
-                          <DetailSection title="品牌印象 (Brand Impression)" icon={Heart}>
-                            <div className="flex items-start p-3 bg-slate-50 rounded-lg border border-slate-100">
-                              <div className={`mt-1.5 w-2 h-2 rounded-full mr-2.5 flex-shrink-0 bg-rose-500`}></div>
-                              <span className="text-slate-700 font-medium text-[13px]">{selectedItem.analysis.brandImpression.text}</span>
-                            </div>
-                          </DetailSection>
-
-                          {/* 3. Competitive Position */}
-                          <DetailSection title="竞品站位 (Comp Position)" icon={TrendingUp}>
-                            <div className="flex items-start p-3 bg-slate-50 rounded-lg border border-slate-100">
-                              <div className={`mt-1.5 w-2 h-2 rounded-full mr-2.5 flex-shrink-0 ${
-                                selectedItem.analysis.compPosition.trend === 'up' ? 'bg-emerald-500' : 
-                                selectedItem.analysis.compPosition.trend === 'down' ? 'bg-red-500' : 'bg-slate-400'
-                              }`}></div>
-                              <span className="text-slate-700 font-medium text-[13px]">{selectedItem.analysis.compPosition.text}</span>
-                            </div>
-                          </DetailSection>
-
-                          {/* 4. Strategy Action */}
-                          <DetailSection title="行动建议 (Action)" icon={Zap} className="!mb-0">
-                            <div className="flex items-start p-3 bg-slate-50 rounded-lg border border-slate-100">
-                              <div className={`mt-1.5 w-2 h-2 rounded-full mr-2.5 flex-shrink-0 bg-blue-500`}></div>
-                              <span className="text-slate-700 font-medium text-[13px]">{selectedItem.analysis.strategy}</span>
-                            </div>
-                          </DetailSection>
-
-                        </div>
-                      </div>
-                    </div>
-                    )}
-
-                    {/* Footer */}
-                    <div className="mt-12 mb-6 text-center">
-                        <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.3em]">System V3.0 • 2025 AITO Analysis</p>
-                    </div>
-
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 lg:p-12 flex flex-col items-center w-full z-10">
+              {!selectedItem && (
+                <div className="flex flex-col items-center justify-center h-full text-center opacity-40">
+                  <div className="w-24 h-24 bg-slate-200 rounded-full flex items-center justify-center mb-6">
+                    <Activity size={40} className="text-slate-400" />
                   </div>
-                  )}
+                  <h3 className="text-lg font-medium text-slate-500">Select an item to view details</h3>
                 </div>
-              </div>
-            </div>
-          );
-        };
+              )}
 
-        const root = createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+              {selectedItem && (
+                <div className="w-full max-w-6xl animate-fade-in-up">
+
+                  {/* Header */}
+                  <div className="mb-8">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex flex-col">
+                        {/* ANALYSIS REPORT Label */}
+                        <div className="mb-2">
+                          <div className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em] leading-tight">
+                            <div>ANALYSIS</div>
+                            <div className="ml-2">REPORT</div>
+                          </div>
+                        </div>
+                        {/* Number Badge */}
+                        <div className="mb-2">
+                          <span className="font-mono text-slate-400 text-sm">#{selectedItem?.id.toString().padStart(3, '0')}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <StatusBadge status={selectedItem?.analysis?.security?.status} text={selectedItem?.analysis?.security?.label} />
+                      </div>
+                    </div>
+                    {/* Main Title */}
+                    <h1 className="text-4xl md:text-5xl font-bold text-slate-700 leading-tight" style={{ color: '#475569' }}>
+                      声誉风险分析
+                    </h1>
+                  </div>
+
+                  {/* Q&A Card */}
+                  <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-slate-100 overflow-hidden mb-8">
+                    <div className="p-8 pb-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 mt-1">
+                          <MessageSquare className="text-blue-600" size={20} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">User Query</p>
+                          <h2 className="text-lg md:text-xl font-medium text-slate-900 leading-relaxed">
+                            {selectedItem?.query}
+                          </h2>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50/80 p-8 pt-6 border-t border-slate-100/50">
+                      <div className="flex items-start gap-4 pl-14">
+                        <div className="relative flex-1">
+                          <div className="absolute -left-6 top-2 bottom-2 w-0.5 bg-slate-200"></div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-slate-200 shadow-sm">
+                              <Smartphone size={12} className="text-slate-400" />
+                              <span className="text-[11px] font-bold text-slate-700">{selectedItem?.platform}</span>
+                            </span>
+                          </div>
+                          <p className="text-[15px] leading-8 text-slate-600 text-justify tracking-normal">
+                            {selectedItem?.response}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Analysis Grid - 横向布局 */}
+                  {selectedItem?.analysis && (
+                    <div className="flex flex-col gap-6">
+
+                      {/* 风险诊断 - 横向展示 */}
+                      <div className={`
+                          relative overflow-hidden rounded-2xl p-6 border shadow-sm transition-colors duration-300
+                          ${selectedItem.analysis.security.status === 'high' ? 'bg-red-50 border-red-100' :
+                          selectedItem.analysis.security.status === 'warning' ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'}
+                      `}>
+                        {/* Top decorative line */}
+                        <div className={`absolute top-0 left-0 right-0 h-1 ${selectedItem.analysis.security.status === 'high' ? 'bg-red-500' :
+                          selectedItem.analysis.security.status === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}></div>
+
+                        <div className="flex flex-col">
+                          {/* Title Bar */}
+                          <h3 className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 pb-2 border-b border-slate-200/60">
+                            <span className="bg-white/60 p-1.5 rounded-md mr-2">
+                              {selectedItem.analysis.security.status === 'high' ? <ShieldAlert size={14} className="text-slate-600" /> :
+                                selectedItem.analysis.security.status === 'warning' ? <AlertTriangle size={14} className="text-slate-600" /> :
+                                  <ShieldCheck size={14} className="text-slate-600" />}
+                            </span>
+                            <span>风险诊断 / Diagnosis</span>
+                          </h3>
+
+                          {/* Diagnosis Text */}
+                          <div className={`text-base leading-7 text-justify ${selectedItem.analysis.security.status === 'high' ? 'text-red-900' :
+                            selectedItem.analysis.security.status === 'warning' ? 'text-amber-900' : 'text-emerald-900'
+                            }`}>
+                            <p>{selectedItem.analysis.diagnosis}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 5个维度 - 根据内容自适应布局 */}
+                      <div className="space-y-4">
+                        {/* 第一行：前4个维度 2x2布局 */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                          {/* 事实核查 */}
+                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
+                              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                                <CheckCircle2 size={16} className="text-emerald-600" />
+                              </div>
+                              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">事实核查</h4>
+                            </div>
+                            <div className="flex-1 flex items-start gap-2.5">
+                              <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${selectedItem.analysis.factCheck.status === 'accurate' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-red-500'}`}></div>
+                              <p className="text-sm text-slate-700 leading-relaxed flex-1">{selectedItem.analysis.factCheck.text}</p>
+                            </div>
+                          </div>
+
+                          {/* 品牌印象 */}
+                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
+                              <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
+                                <Heart size={16} className="text-rose-600" />
+                              </div>
+                              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">品牌印象</h4>
+                            </div>
+                            <div className="flex-1 flex items-start gap-2.5">
+                              <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)] mt-1.5 flex-shrink-0"></div>
+                              <p className="text-sm text-slate-700 leading-relaxed flex-1">{selectedItem.analysis.brandImpression.text}</p>
+                            </div>
+                          </div>
+
+                          {/* 竞品站位 */}
+                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
+                              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                                <TrendingUp size={16} className="text-blue-600" />
+                              </div>
+                              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">竞品站位</h4>
+                            </div>
+                            <div className="flex-1 flex items-start gap-2.5">
+                              <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${selectedItem.analysis.compPosition.trend === 'up' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' :
+                                selectedItem.analysis.compPosition.trend === 'down' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'bg-slate-400'
+                                }`}></div>
+                              <p className="text-sm text-slate-700 leading-relaxed flex-1">{selectedItem.analysis.compPosition.text}</p>
+                            </div>
+                          </div>
+
+                          {/* 产品安全 */}
+                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col hover:shadow-md transition-shadow">
+                            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
+                              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                                <ShieldAlert size={16} className="text-indigo-600" />
+                              </div>
+                              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">产品安全</h4>
+                            </div>
+                            <div className="flex-1 flex items-start gap-2.5">
+                              {selectedItem.analysis.safety && selectedItem.analysis.safety.contentFlag === '是' ? (
+                                <>
+                                  <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)] mt-1.5 flex-shrink-0"></div>
+                                  <div className="flex-1">
+                                    <p className="text-sm text-slate-700 leading-relaxed font-medium mb-1">{selectedItem.analysis.safety.issueType}</p>
+                                    <p className="text-sm text-slate-600 leading-relaxed">{selectedItem.analysis.safety.description}</p>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="w-2 h-2 rounded-full bg-slate-300 mt-1.5 flex-shrink-0"></div>
+                                  <p className="text-sm text-slate-400 italic leading-relaxed flex-1">未检出相关内容</p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                        </div>
+
+                        {/* 第二行：行动建议 - 单独一行，占据全宽 */}
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col hover:shadow-md transition-shadow">
+                          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
+                            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                              <Zap size={16} className="text-amber-600" />
+                            </div>
+                            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">行动建议</h4>
+                          </div>
+                          <div className="flex items-start gap-2.5">
+                            <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)] mt-1.5 flex-shrink-0"></div>
+                            <p className="text-sm text-slate-700 leading-relaxed flex-1">{selectedItem.analysis.strategy}</p>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-16 mb-8 text-center opacity-40 hover:opacity-100 transition-opacity">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em]">Powered by AITO Intelligence Analysis</p>
+                  </div>
+
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const root = createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
 </body>
+
 </html>

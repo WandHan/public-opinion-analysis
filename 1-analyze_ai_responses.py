@@ -35,13 +35,13 @@ client = OpenAI(
 # ==================== 读取分析框架 ====================
 def load_analysis_framework():
     """加载分析框架文档内容"""
-    framework_path = "ref_md/基于品牌价值理解与声誉安全的AI内容分析框架_20251119.md"
+    framework_path = "ref_md/基于品牌价值理解与声誉安全的AI内容分析框架_20251126维改.md"
     with open(framework_path, 'r', encoding='utf-8') as f:
         return f.read()
 
 def load_output_framework():
     """加载输出框架文档内容"""
-    output_path = "ref_md/赛力斯_问界AI声誉分析结果框架设计（用于生成网页）.md"
+    output_path = "ref_md/赛力斯_问界AI声誉分析结果框架设计（用于生成网页）_20251126维改.md"
     with open(output_path, 'r', encoding='utf-8') as f:
         return f.read()
 
