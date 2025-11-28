@@ -693,103 +693,111 @@
                         </div>
                       </div>
 
-                      {/* 5个维度 - 根据内容自适应布局 */}
-                      <div className="space-y-4">
-                        {/* 第一行：前4个维度 2x2布局 */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* 5个维度 - 统一容器，增强整体感 */}
+                      <div className="bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.02)] border border-slate-100 overflow-hidden">
+                        <div className="p-6">
+                          {/* 统一的标题区域 */}
+                          <h3 className="flex items-center text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 pb-2 border-b border-slate-200/60">
+                            <span className="bg-white/60 p-1.5 rounded-md mr-2">
+                              <Layers size={14} className="text-slate-600" />
+                            </span>
+                            <span>五维度分析 / Multi-Dimensional Analysis</span>
+                          </h3>
 
-                          {/* 事实核查 */}
-                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col hover:shadow-md transition-shadow">
-                            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
-                              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                                <CheckCircle2 size={16} className="text-emerald-600" />
+                          {/* 第一行：前4个维度 2x2布局 */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+                            {/* 事实核查 */}
+                            <div className="p-4 rounded-lg bg-gradient-to-br from-emerald-50/30 to-transparent border border-emerald-100/50 hover:border-emerald-200 hover:shadow-sm transition-all">
+                              <div className="flex items-center gap-2 mb-3">
+                                <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center">
+                                  <CheckCircle2 size={14} className="text-emerald-600" />
+                                </div>
+                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">事实核查</h4>
                               </div>
-                              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">事实核查</h4>
+                              <div className="flex items-start gap-2.5">
+                                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${selectedItem.analysis.factCheck.status === 'accurate' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-red-500'}`}></div>
+                                <p className="text-sm text-slate-700 leading-relaxed flex-1">{selectedItem.analysis.factCheck.text}</p>
+                              </div>
                             </div>
-                            <div className="flex-1 flex items-start gap-2.5">
-                              <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${selectedItem.analysis.factCheck.status === 'accurate' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-red-500'}`}></div>
-                              <p className="text-sm text-slate-700 leading-relaxed flex-1">{selectedItem.analysis.factCheck.text}</p>
+
+                            {/* 品牌印象 */}
+                            <div className="p-4 rounded-lg bg-gradient-to-br from-rose-50/30 to-transparent border border-rose-100/50 hover:border-rose-200 hover:shadow-sm transition-all">
+                              <div className="flex items-center gap-2 mb-3">
+                                <div className="w-7 h-7 rounded-lg bg-rose-50 flex items-center justify-center">
+                                  <Heart size={14} className="text-rose-600" />
+                                </div>
+                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">品牌印象</h4>
+                              </div>
+                              <div className="flex items-start gap-2.5">
+                                <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)] mt-1.5 flex-shrink-0"></div>
+                                <p className="text-sm text-slate-700 leading-relaxed flex-1">{selectedItem.analysis.brandImpression.text}</p>
+                              </div>
                             </div>
+
+                            {/* 竞品站位 */}
+                            <div className="p-4 rounded-lg bg-gradient-to-br from-blue-50/30 to-transparent border border-blue-100/50 hover:border-blue-200 hover:shadow-sm transition-all">
+                              <div className="flex items-center gap-2 mb-3">
+                                <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+                                  <TrendingUp size={14} className="text-blue-600" />
+                                </div>
+                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">竞品站位</h4>
+                              </div>
+                              <div className="flex items-start gap-2.5">
+                                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.4)] mt-1.5 flex-shrink-0"></div>
+                                <p className="text-sm text-slate-700 leading-relaxed flex-1">{selectedItem.analysis.compPosition.text}</p>
+                              </div>
+                            </div>
+
+                            {/* 产品安全 */}
+                            <div className="p-4 rounded-lg bg-gradient-to-br from-indigo-50/30 to-transparent border border-indigo-100/50 hover:border-indigo-200 hover:shadow-sm transition-all">
+                              <div className="flex items-center gap-2 mb-3">
+                                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center">
+                                  <ShieldAlert size={14} className="text-indigo-600" />
+                                </div>
+                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">产品安全</h4>
+                              </div>
+                              <div className="flex items-start gap-2.5">
+                                {selectedItem.analysis.safety && selectedItem.analysis.safety.contentFlag === '是' ? (
+                                  <>
+                                    <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)] mt-1.5 flex-shrink-0"></div>
+                                    <div className="flex-1">
+                                      <p className="text-sm text-slate-700 leading-relaxed font-medium mb-1">{selectedItem.analysis.safety.issueType}</p>
+                                      <p className="text-sm text-slate-600 leading-relaxed">{selectedItem.analysis.safety.description}</p>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="w-2 h-2 rounded-full bg-slate-300 mt-1.5 flex-shrink-0"></div>
+                                    <p className="text-sm text-slate-400 italic leading-relaxed flex-1">未检出相关内容</p>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
                           </div>
 
-                          {/* 品牌印象 */}
-                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col hover:shadow-md transition-shadow">
-                            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
-                              <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
-                                <Heart size={16} className="text-rose-600" />
+                          {/* 第二行：行动建议 - 单独一行，占据全宽 */}
+                          <div className="p-4 rounded-lg bg-gradient-to-br from-amber-50/30 to-transparent border border-amber-100/50 hover:border-amber-200 hover:shadow-sm transition-all">
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center">
+                                <Zap size={14} className="text-amber-600" />
                               </div>
-                              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">品牌印象</h4>
+                              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">行动建议</h4>
                             </div>
-                            <div className="flex-1 flex items-start gap-2.5">
-                              <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)] mt-1.5 flex-shrink-0"></div>
-                              <p className="text-sm text-slate-700 leading-relaxed flex-1">{selectedItem.analysis.brandImpression.text}</p>
-                            </div>
-                          </div>
-
-                          {/* 竞品站位 */}
-                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col hover:shadow-md transition-shadow">
-                            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
-                              <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                                <TrendingUp size={16} className="text-blue-600" />
-                              </div>
-                              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">竞品站位</h4>
-                            </div>
-                            <div className="flex-1 flex items-start gap-2.5">
-                              <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${selectedItem.analysis.compPosition.trend === 'up' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' :
-                                selectedItem.analysis.compPosition.trend === 'down' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'bg-slate-400'
-                                }`}></div>
-                              <p className="text-sm text-slate-700 leading-relaxed flex-1">{selectedItem.analysis.compPosition.text}</p>
-                            </div>
-                          </div>
-
-                          {/* 产品安全 */}
-                          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col hover:shadow-md transition-shadow">
-                            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
-                              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-                                <ShieldAlert size={16} className="text-indigo-600" />
-                              </div>
-                              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">产品安全</h4>
-                            </div>
-                            <div className="flex-1 flex items-start gap-2.5">
-                              {selectedItem.analysis.safety && selectedItem.analysis.safety.contentFlag === '是' ? (
-                                <>
-                                  <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)] mt-1.5 flex-shrink-0"></div>
-                                  <div className="flex-1">
-                                    <p className="text-sm text-slate-700 leading-relaxed font-medium mb-1">{selectedItem.analysis.safety.issueType}</p>
-                                    <p className="text-sm text-slate-600 leading-relaxed">{selectedItem.analysis.safety.description}</p>
-                                  </div>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="w-2 h-2 rounded-full bg-slate-300 mt-1.5 flex-shrink-0"></div>
-                                  <p className="text-sm text-slate-400 italic leading-relaxed flex-1">未检出相关内容</p>
-                                </>
-                              )}
+                            <div className="flex items-start gap-2.5">
+                              <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)] mt-1.5 flex-shrink-0"></div>
+                              <p className="text-sm text-slate-700 leading-relaxed flex-1">{selectedItem.analysis.strategy}</p>
                             </div>
                           </div>
 
                         </div>
-
-                        {/* 第二行：行动建议 - 单独一行，占据全宽 */}
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col hover:shadow-md transition-shadow">
-                          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
-                            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
-                              <Zap size={16} className="text-amber-600" />
-                            </div>
-                            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">行动建议</h4>
-                          </div>
-                          <div className="flex items-start gap-2.5">
-                            <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)] mt-1.5 flex-shrink-0"></div>
-                            <p className="text-sm text-slate-700 leading-relaxed flex-1">{selectedItem.analysis.strategy}</p>
-                          </div>
-                        </div>
-
                       </div>
                     </div>
                   )}
 
                   <div className="mt-16 mb-8 text-center opacity-40 hover:opacity-100 transition-opacity">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em]">Powered by AITO Intelligence Analysis</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em]">AITO Reputation Monitoring</p>
                   </div>
 
                 </div>

@@ -8,12 +8,98 @@
 import json
 import os
 import glob
+import sys
+import time
 from collections import Counter
 from datetime import datetime
 from openai import OpenAI
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
 from json_repair import repair_json
+try:
+    from tqdm import tqdm
+    HAS_TQDM = True
+except ImportError:
+    HAS_TQDM = False
+    # 简单的进度显示替代方案
+    class tqdm:
+        def __init__(self, iterable=None, total=None, desc="", unit="", ncols=80, leave=True, **kwargs):
+            self.iterable = iterable
+            self.total = total or (len(iterable) if iterable else 0)
+            self.desc = desc
+            self.unit = unit
+            self.current = 0
+            self._n = 0  # 当前值（用于百分比模式）
+            self.ncols = ncols
+            self.leave = leave
+            self.start_time = time.time()
+        
+        @property
+        def n(self):
+            return self._n
+        
+        @n.setter
+        def n(self, value):
+            self._n = value
+            if self.total > 0:
+                self.current = int((self._n / 100) * self.total) if self.total == 100 else self._n
+        
+        def __enter__(self):
+            return self
+        
+        def __exit__(self, *args):
+            self.close()
+        
+        def __iter__(self):
+            if self.iterable:
+                for item in self.iterable:
+                    yield item
+                    self.update(1)
+        
+        def update(self, n=1):
+            self.current += n
+            self._n = min((self.current / self.total) * 100, 100) if self.total > 0 else self.current
+            self.refresh()
+        
+        def refresh(self):
+            """刷新显示"""
+            elapsed = time.time() - self.start_time
+            if self.total > 0:
+                if self.total == 100:
+                    # 百分比模式
+                    percent = self._n
+                    current_display = int(self._n)
+                else:
+                    percent = (self.current / self.total) * 100
+                    current_display = self.current
+                
+                bar_length = 30
+                filled = int(bar_length * percent / 100)
+                bar = '█' * filled + '░' * (bar_length - filled)
+                # 使用 \r 回到行首，并用空格清除旧内容
+                line = f'{self.desc} [{bar}] {percent:.1f}% ({current_display}/{self.total} {self.unit}) 耗时: {elapsed:.1f}s'
+                # 确保行长度不超过 ncols，避免换行
+                if len(line) > self.ncols:
+                    line = line[:self.ncols-3] + '...'
+                sys.stdout.write(f'\r{line}' + ' ' * max(0, self.ncols - len(line)))
+                sys.stdout.flush()
+        
+        def set_description(self, desc):
+            self.desc = desc
+            self.refresh()
+        
+        def write(self, s):
+            """写入消息（换行显示）"""
+            sys.stdout.write('\n' + s)
+            sys.stdout.flush()
+        
+        def close(self):
+            if self.leave:
+                sys.stdout.write('\n')
+            else:
+                # 清除当前行
+                sys.stdout.write('\r' + ' ' * self.ncols + '\r')
+            sys.stdout.flush()
 
 # ==================== 加载环境变量 ====================
 load_dotenv()
@@ -69,7 +155,6 @@ def scan_analysis_files(analysis_dir: str = "analysis_results", index_file: str 
                 print(f"⚠️  文件不存在，已跳过: {filename}")
         
         files.sort()
-        print(f"✓ 从索引文件读取到 {len(files)} 个文件")
         return files
         
     except Exception as e:
@@ -87,17 +172,25 @@ def scan_analysis_files(analysis_dir: str = "analysis_results", index_file: str 
         return files
 
 # ==================== 加载分析结果 ====================
-def load_analysis_data(file_path: str) -> List[Dict]:
+def load_analysis_data(file_path: str, pbar: Optional[tqdm] = None) -> List[Dict]:
     """加载单个分析结果文件"""
     
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            
-        print(f"✓ 加载文件: {os.path.basename(file_path)} ({len(data)} 条数据)")
+        
+        filename = os.path.basename(file_path)
+        if pbar:
+            # 只更新描述，不打印，避免重复输出
+            pbar.set_description(f"加载: {filename[:25]}... ({len(data)}条)")
+        else:
+            print(f"✓ 加载文件: {filename} ({len(data)} 条数据)")
         return data
     except Exception as e:
-        print(f"✗ 加载文件失败 {file_path}: {e}")
+        if pbar:
+            pbar.set_description(f"✗ 加载失败: {os.path.basename(file_path)[:30]}...")
+        else:
+            print(f"✗ 加载文件失败 {file_path}: {e}")
         return []
 
 # ==================== 加载GEO方法论文件 ====================
@@ -153,7 +246,7 @@ def extract_platforms(critical_issues: Dict[str, List[Dict]]) -> str:
         return "、".join(top_platforms)
 
 # ==================== 提取预警和高危内容 ====================
-def extract_critical_issues(all_data: List[Dict]) -> Dict[str, List[Dict]]:
+def extract_critical_issues(all_data: List[Dict], show_progress: bool = True) -> Dict[str, List[Dict]]:
     """
     提取所有预警(🟡)和高危(🔴)的分析结果
     按安全状态分类
@@ -164,13 +257,31 @@ def extract_critical_issues(all_data: List[Dict]) -> Dict[str, List[Dict]]:
         "预警": []
     }
     
-    for item in all_data:
-        security_status = item.get("Security_Status", "")
-        
-        if "🔴" in security_status or "高危" in security_status:
-            critical_issues["高危"].append(item)
-        elif "🟡" in security_status or "预警" in security_status:
-            critical_issues["预警"].append(item)
+    if show_progress:
+        pbar = tqdm(total=len(all_data), desc="提取关键问题", unit="条", ncols=80, leave=False)
+    else:
+        pbar = None
+    
+    current_count = 0
+    try:
+        for item in all_data:
+            security_status = item.get("Security_Status", "")
+            
+            if "🔴" in security_status or "高危" in security_status:
+                critical_issues["高危"].append(item)
+            elif "🟡" in security_status or "预警" in security_status:
+                critical_issues["预警"].append(item)
+            
+            if pbar:
+                pbar.update(1)
+                current_count += 1
+                # 减少更新频率，避免过于频繁的刷新
+                update_interval = max(1, len(all_data) // 20)
+                if current_count % update_interval == 0 or current_count == len(all_data):
+                    pbar.set_description(f"提取中 (高危:{len(critical_issues['高危'])}, 预警:{len(critical_issues['预警'])})")
+    finally:
+        if pbar:
+            pbar.close()
     
     return critical_issues
 
@@ -233,6 +344,7 @@ def build_synthesis_prompt(critical_issues: Dict[str, List[Dict]], method_conten
 3. **维度差异性**：各维度之间必须有明显区别，对应GEO方法论中的不同策略模块。
 4. **可执行性**：每个行动项要具体到工具（如LowFruits, Firecrawl）、平台、时间节点。
 5. **禁止直接向AI平台提交请求**：**严禁**生成任何涉及"向AI平台提交官方事实核查请求包"、"向平台提交申诉"、"联系平台客服"等直接与AI平台官方沟通的行动项。所有策略必须通过内容优化、技术SEO、数据投喂等GEO方法来实现，而非直接与平台沟通。
+6. **完整性要求**：**每个维度必须包含完整的字段**，包括：action_items（至少2-3个行动项）、resources_needed、risk_mitigation。**严禁**省略任何字段或截断内容。如果内容较长，请确保所有字段都完整输出。
 
 **建议维度选择**（请严格依据GEO方法论的章节结构）：
 
@@ -252,7 +364,7 @@ def build_synthesis_prompt(critical_issues: Dict[str, List[Dict]], method_conten
 
 请严格按照以下JSON格式输出，不要添加任何其他文字、注释或说明：
 
-{{ "metadata": {{ "生成时间": "{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", "分析数据来源": "赛力斯舆情分析系统", "目标平台": "{platform}", "高危问题数量": {high_risk_count}, "预警问题数量": {warning_count}, "总问题数量": {high_risk_count + warning_count} }}, "executive_summary": {{ "核心问题概述": "用2-3句话总结当前最严重的声誉风险", "紧急程度评估": "高/中/低", "预计影响范围": "描述这些问题可能影响的用户群体和决策场景" }}, "solutions": [ {{ "dimension": "维度名称（必须对应GEO方法论中的策略方向，如'内容矩阵构建'或'技术SEO优化'）", "priority": "高/中/低", "target_problems": ["针对的核心问题1", "针对的核心问题2"], "strategy_overview": "该维度的整体策略描述（200字左右）。请务必聚焦于解决方案的**具体内容**（Content）和执行逻辑，必须引用GEO方法论中的具体概念（如'认知真空'、'DSS原则'等），拒绝空话套话。", "geo_principles": ["应用的GEO原则1（如：摘要前置）", "应用的GEO原则2（如：GEOHead注入）"], "action_items": [ {{ "action": "具体行动项标题", "description": "详细描述该行动项的执行内容。若为内容策略，请提供**具体选题、核心话术或数据引用格式**；若为技术策略，请提供**具体工具配置或标签写法**。**禁止**包含任何需要直接与AI平台官方沟通的内容（如提交请求包、申诉等），必须通过GEO技术手段实现。", "geo_method": "对应的GEO方法（需与GEO方法论保持一致）", "platforms": ["{platform}"], "expected_outcome": "预期效果（如：AI可见性指数提升）", "timeline": "执行时间线", "kpi": "关键绩效指标" }} ], "resources_needed": ["所需资源1", "所需资源2"], "risk_mitigation": "该策略可能遇到的风险及应对方式" }} // 请根据实际情况生成3-6个维度的解决方案对象 ], "implementation_roadmap": {{ "phase_1_immediate": {{ "timeframe": "0-2周（依据GEO方法论中的'排名上榜'阶段）", "focus": "最紧急的行动", "key_milestones": ["里程碑1", "里程碑2"] }}, "phase_2_short_term": {{ "timeframe": "2周-2个月", "focus": "短期改善", "key_milestones": ["里程碑"] }}, "phase_3_long_term": {{ "timeframe": "2-6个月（依据GEO方法论中的'排名优化'阶段）", "focus": "长期建设", "key_milestones": ["里程碑"] }} }}, "success_metrics": {{ "primary_kpis": [ {{ "indicator": "指标名称（参考GEO方法论中的KPI部分，如AI可见性指数）", "current_baseline": "当前基线", "target_3_months": "3个月目标", "target_6_months": "6个月目标" }} ] }} }}
+{{ "metadata": {{ "生成时间": "{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", "分析数据来源": "赛力斯舆情分析系统", "目标平台": "{platform}", "高危问题数量": {high_risk_count}, "预警问题数量": {warning_count}, "总问题数量": {high_risk_count + warning_count} }}, "executive_summary": {{ "核心问题概述": "用2-3句话总结当前最严重的声誉风险", "紧急程度评估": "高/中/低", "预计影响范围": "描述这些问题可能影响的用户群体和决策场景" }}, "solutions": [ {{ "dimension": "维度名称（必须对应GEO方法论中的策略方向，如'内容矩阵构建'或'技术SEO优化'）", "priority": "高/中/低", "target_problems": ["针对的核心问题1", "针对的核心问题2"], "strategy_overview": "该维度的整体策略描述（200字左右）。请务必聚焦于解决方案的**具体内容**（Content）和执行逻辑，必须引用GEO方法论中的具体概念（如'认知真空'、'DSS原则'等），拒绝空话套话。", "geo_principles": ["应用的GEO原则1（如：摘要前置）", "应用的GEO原则2（如：GEOHead注入）"], "action_items": [ {{ "action": "具体行动项标题", "description": "详细描述该行动项的执行内容。若为内容策略，请提供**具体选题、核心话术或数据引用格式**；若为技术策略，请提供**具体工具配置或标签写法**。**禁止**包含任何需要直接与AI平台官方沟通的内容（如提交请求包、申诉等），必须通过GEO技术手段实现。", "geo_method": "对应的GEO方法（需与GEO方法论保持一致）", "platforms": ["{platform}"], "expected_outcome": "预期效果（如：AI可见性指数提升）", "timeline": "执行时间线（必须完整，不能截断）", "kpi": "关键绩效指标" }} ], "resources_needed": ["所需资源1", "所需资源2"], "risk_mitigation": "该策略可能遇到的风险及应对方式（必须完整描述，不能省略）" }} // 请根据实际情况生成3-6个维度的解决方案对象，**每个维度必须包含完整的action_items（至少2-3个）、resources_needed和risk_mitigation字段，严禁省略或截断** ], "implementation_roadmap": {{ "phase_1_immediate": {{ "timeframe": "0-2周（依据GEO方法论中的'排名上榜'阶段）", "focus": "最紧急的行动", "key_milestones": ["里程碑1", "里程碑2"] }}, "phase_2_short_term": {{ "timeframe": "2周-2个月", "focus": "短期改善", "key_milestones": ["里程碑"] }}, "phase_3_long_term": {{ "timeframe": "2-6个月（依据GEO方法论中的'排名优化'阶段）", "focus": "长期建设", "key_milestones": ["里程碑"] }} }}, "success_metrics": {{ "primary_kpis": [ {{ "indicator": "指标名称（参考GEO方法论中的KPI部分，如AI可见性指数）", "current_baseline": "当前基线", "target_3_months": "3个月目标", "target_6_months": "6个月目标" }} ] }} }}
 
 关键要求：
 
@@ -267,67 +379,165 @@ def build_synthesis_prompt(critical_issues: Dict[str, List[Dict]], method_conten
    - "向平台发送官方声明"
    - 任何需要直接与AI平台官方沟通的行动
    所有解决方案必须通过内容优化、技术SEO、数据源建设、关键词策略等GEO技术手段实现，而非依赖平台官方介入。
-6. **输出必须是纯JSON格式**，可以被标准JSON解析器解析。
-7. **不要用`json`包裹，不要添加任何解释文字**。
+6. **完整性要求（非常重要）**：
+   - **每个维度必须包含至少2-3个action_items**，不能只有1个
+   - **每个维度必须包含resources_needed字段**（至少2-3项资源）
+   - **每个维度必须包含risk_mitigation字段**（完整描述风险和应对方式，不能省略）
+   - **所有action_items的timeline、kpi等字段必须完整**，不能截断
+   - **如果内容较长，请确保所有字段都完整输出，不要因为长度限制而省略**
+7. **输出必须是纯JSON格式**，可以被标准JSON解析器解析。
+8. **不要用`json`包裹，不要添加任何解释文字**。
 """
     
     return prompt
+
+# ==================== 验证解决方案完整性 ====================
+def validate_solution_completeness(result: Dict) -> List[str]:
+    """验证生成的解决方案是否完整"""
+    errors = []
+    
+    if "solutions" not in result:
+        return ["缺少solutions字段"]
+    
+    for idx, solution in enumerate(result.get("solutions", []), 1):
+        dimension = solution.get("dimension", f"维度{idx}")
+        
+        # 检查action_items
+        action_items = solution.get("action_items", [])
+        if len(action_items) < 2:
+            errors.append(f"{dimension}: action_items数量不足（当前{len(action_items)}个，建议至少2-3个）")
+        
+        # 检查每个action_item的完整性
+        for i, item in enumerate(action_items, 1):
+            required_fields = ["action", "description", "geo_method", "platforms", "expected_outcome", "timeline", "kpi"]
+            for field in required_fields:
+                if field not in item or not item[field] or (isinstance(item[field], str) and len(item[field].strip()) == 0):
+                    errors.append(f"{dimension} - action_item {i}: 缺少或为空字段 '{field}'")
+            
+            # 检查timeline是否被截断（以常见截断字符结尾）
+            timeline = item.get("timeline", "")
+            if timeline and (timeline.endswith("互") or timeline.endswith("...") or len(timeline) < 10):
+                errors.append(f"{dimension} - action_item {i}: timeline可能被截断")
+        
+        # 检查resources_needed
+        if "resources_needed" not in solution or not solution["resources_needed"]:
+            errors.append(f"{dimension}: 缺少resources_needed字段")
+        elif len(solution["resources_needed"]) < 2:
+            errors.append(f"{dimension}: resources_needed数量不足（当前{len(solution['resources_needed'])}个，建议至少2-3个）")
+        
+        # 检查risk_mitigation
+        if "risk_mitigation" not in solution or not solution["risk_mitigation"]:
+            errors.append(f"{dimension}: 缺少risk_mitigation字段")
+        elif len(solution["risk_mitigation"].strip()) < 50:
+            errors.append(f"{dimension}: risk_mitigation内容过短，可能不完整")
+    
+    return errors
 
 # ==================== 调用AI生成综合解决方案 ====================
 def generate_solutions(critical_issues: Dict[str, List[Dict]], method_content: str, platform: str, max_retries: int = 3) -> Dict:
     """调用AI生成综合解决方案"""
     
-    print("\n" + "="*80)
-    print("正在生成综合解决方案...")
-    print(f"- 高危问题: {len(critical_issues['高危'])} 个")
-    print(f"- 预警问题: {len(critical_issues['预警'])} 个")
-    print(f"- 目标平台: {platform}")
-    print("="*80 + "\n")
+    print(f"正在生成综合解决方案 (高危:{len(critical_issues['高危'])}个, 预警:{len(critical_issues['预警'])}个, 平台:{platform})...")
     
     prompt = build_synthesis_prompt(critical_issues, method_content, platform)
     
-    for attempt in range(max_retries):
-        try:
-            if attempt > 0:
-                print(f"  第 {attempt + 1} 次尝试...")
-            
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.3,
-                max_tokens=8000
-            )
-            
-            result_text = response.choices[0].message.content.strip()
-            
-            # 尝试解析JSON
+    # 显示进度状态
+    with tqdm(total=100, desc="AI生成中", unit="%", ncols=80, leave=False) as status_pbar:
+        for attempt in range(max_retries):
             try:
-                result = json.loads(result_text)
-                print("✓ 解决方案生成成功！")
-                return result
-            except json.JSONDecodeError:
-                # 尝试修复JSON
-                print("  尝试修复JSON格式...")
-                repaired = repair_json(result_text)
-                result = json.loads(repaired)
-                print("✓ JSON修复成功，解决方案生成完成！")
-                return result
+                status_pbar.set_description(f"AI生成中 (尝试 {attempt + 1}/{max_retries})")
+                status_pbar.n = 0
+                status_pbar.refresh()
                 
-        except Exception as e:
-            print(f"✗ 尝试 {attempt + 1} 失败: {e}")
-            if attempt == max_retries - 1:
-                print(f"✗ 已达到最大重试次数")
-                return {
-                    "error": "生成失败",
-                    "message": str(e),
-                    "metadata": {
-                        "生成时间": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                        "高危问题数量": len(critical_issues['高危']),
-                        "预警问题数量": len(critical_issues['预警'])
+                if attempt > 0:
+                    status_pbar.write(f"  第 {attempt + 1} 次尝试...")
+                
+                # 显示API调用状态
+                status_pbar.set_description(f"正在调用API ({MODEL_NAME})...")
+                status_pbar.n = 20
+                status_pbar.refresh()
+                
+                start_time = time.time()
+                response = client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=[
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.3,
+                    max_tokens=16000  # 增加token限制，确保完整输出
+                )
+                elapsed = time.time() - start_time
+                
+                result_text = response.choices[0].message.content.strip()
+                
+                status_pbar.set_description("正在解析响应...")
+                status_pbar.n = 80
+                status_pbar.refresh()
+                
+                # 尝试解析JSON
+                try:
+                    result = json.loads(result_text)
+                    
+                    # 验证JSON完整性
+                    validation_errors = validate_solution_completeness(result)
+                    if validation_errors:
+                        status_pbar.write("⚠️  警告: 检测到不完整的字段:")
+                        for error in validation_errors:
+                            status_pbar.write(f"  - {error}")
+                    
+                    status_pbar.n = 100
+                    status_pbar.set_description("✓ 生成成功")
+                    status_pbar.refresh()
+                    print(f"✓ 解决方案生成成功 (耗时: {elapsed:.1f}秒)")
+                    return result
+                except json.JSONDecodeError:
+                    # 尝试修复JSON
+                    status_pbar.set_description("修复JSON格式...")
+                    status_pbar.refresh()
+                    repaired = repair_json(result_text)
+                    result = json.loads(repaired)
+                    
+                    # 验证修复后的JSON完整性
+                    validation_errors = validate_solution_completeness(result)
+                    if validation_errors:
+                        status_pbar.write("⚠️  警告: 修复后仍存在不完整的字段:")
+                        for error in validation_errors:
+                            status_pbar.write(f"  - {error}")
+                    
+                    status_pbar.n = 100
+                    status_pbar.set_description("✓ 修复成功")
+                    status_pbar.refresh()
+                    print(f"✓ JSON修复成功，解决方案生成完成 (耗时: {elapsed:.1f}秒)")
+                    return result
+                    
+            except Exception as e:
+                status_pbar.n = (attempt + 1) * 30
+                status_pbar.set_description(f"✗ 尝试 {attempt + 1} 失败")
+                status_pbar.refresh()
+                # 使用 write 方法避免与进度条冲突
+                if attempt == 0:
+                    status_pbar.write(f"✗ 尝试 {attempt + 1} 失败: {str(e)[:50]}...")
+                
+                if attempt == max_retries - 1:
+                    print(f"✗ 已达到最大重试次数")
+                    return {
+                        "error": "生成失败",
+                        "message": str(e),
+                        "metadata": {
+                            "生成时间": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                            "高危问题数量": len(critical_issues['高危']),
+                            "预警问题数量": len(critical_issues['预警'])
+                        }
                     }
-                }
+                else:
+                    # 等待后重试
+                    wait_time = min(2 ** attempt, 10)  # 指数退避，最多10秒
+                    status_pbar.set_description(f"等待 {wait_time}s 后重试...")
+                    status_pbar.refresh()
+                    for i in range(wait_time):
+                        time.sleep(1)
+                        status_pbar.n = min(status_pbar.n + (100 // wait_time), 99)
+                        status_pbar.refresh()
     
     return {}
 
@@ -383,7 +593,18 @@ def main():
         print("⚠️  错误: 请在.env文件中配置API_KEY")
         return
     
-    # 从索引文件读取分析结果文件列表
+    # 整体进度跟踪
+    total_steps = 6
+    current_step = 0
+    
+    def update_main_progress(step_name: str):
+        nonlocal current_step
+        current_step += 1
+        progress_pct = (current_step / total_steps) * 100
+        print(f"[{current_step}/{total_steps}] {step_name} ({progress_pct:.0f}%)")
+    
+    # 步骤1: 扫描文件
+    update_main_progress("扫描分析结果文件")
     analysis_dir = "analysis_results"
     index_file = os.path.join(analysis_dir, "files_index.json")
     files = scan_analysis_files(analysis_dir, index_file)
@@ -392,33 +613,35 @@ def main():
         print(f"\n⚠️  未找到需要分析的文件（从索引文件: {index_file}）")
         return
     
-    print(f"\n从索引文件读取到 {len(files)} 个分析结果文件:")
-    for idx, file in enumerate(files, 1):
-        print(f"  {idx}. {os.path.basename(file)}")
+    print(f"✓ 从索引文件读取到 {len(files)} 个分析结果文件")
+    if len(files) <= 5:  # 只有文件数量少时才显示列表
+        for idx, file in enumerate(files, 1):
+            print(f"  {idx}. {os.path.basename(file)}")
     
-    # 加载所有分析数据
-    print("\n正在加载分析数据...")
+    # 步骤2: 加载所有分析数据
+    update_main_progress("加载分析数据")
     all_data = []
-    for file in files:
-        data = load_analysis_data(file)
-        all_data.extend(data)
     
-    print(f"\n✓ 共加载 {len(all_data)} 条分析数据")
+    with tqdm(total=len(files), desc="加载文件", unit="个", ncols=80, leave=False) as pbar:
+        for file in files:
+            data = load_analysis_data(file, pbar)
+            all_data.extend(data)
+            pbar.update(1)
     
-    # 提取预警和高危问题
-    print("\n正在提取预警和高危问题...")
-    critical_issues = extract_critical_issues(all_data)
+    print(f"✓ 共加载 {len(all_data)} 条分析数据")
     
-    print(f"✓ 提取完成:")
-    print(f"  - 高危问题: {len(critical_issues['高危'])} 个")
-    print(f"  - 预警问题: {len(critical_issues['预警'])} 个")
+    # 步骤3: 提取预警和高危问题
+    update_main_progress("提取关键问题")
+    critical_issues = extract_critical_issues(all_data, show_progress=True)
+    
+    print(f"✓ 提取完成: 高危 {len(critical_issues['高危'])} 个, 预警 {len(critical_issues['预警'])} 个")
     
     if len(critical_issues['高危']) == 0 and len(critical_issues['预警']) == 0:
         print("\n✓ 太棒了！未发现高危或预警问题")
         return
     
-    # 加载GEO方法论文件
-    print("\n正在加载GEO方法论文件...")
+    # 步骤4: 加载GEO方法论文件
+    update_main_progress("加载GEO方法论")
     method_file = "ref_md/GEO方法论与实战全案.md"
     method_content = load_geo_methodology(method_file)
     
@@ -426,21 +649,27 @@ def main():
         print("⚠️  警告: 未加载到GEO方法论内容，将使用空内容")
         method_content = ""
     
-    # 提取平台信息
-    print("\n正在分析平台分布...")
+    # 步骤5: 提取平台信息
+    update_main_progress("分析平台分布")
     platform = extract_platforms(critical_issues)
     print(f"✓ 主要平台: {platform}")
     
-    # 生成综合解决方案
+    # 步骤6: 生成综合解决方案
+    update_main_progress("生成综合解决方案")
     solutions = generate_solutions(critical_issues, method_content, platform)
     
     # 保存解决方案到solution目录
     if solutions and "error" not in solutions:
+        print("\n" + "="*80)
+        print("保存解决方案".center(80))
+        print("="*80)
         output_file = save_solutions(solutions, output_dir="solution")
-        print(f"✓ 任务完成！")
+        print(f"\n{'='*80}")
+        print("✓ 任务完成！".center(80))
+        print(f"{'='*80}")
         print(f"下一步: 可以使用该JSON文件进行可视化展示")
     else:
-        print("\n✗ 解决方案生成失败，请检查错误信息")
+        print("✗ 解决方案生成失败，请检查错误信息")
 
 if __name__ == "__main__":
     main()
